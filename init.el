@@ -586,19 +586,17 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "M-`" 'my/jump-to-mark)
 (bind-key "C-a" 'my/smarter-move-beginning-of-line)
 
-;;;; ace-jump-mode
+;;;; avy
 ;; (global-unset-key (kbd "C-."))
-(use-package ace-jump-mode
+(use-package avy
   :diminish t
-  :bind ("C-." . ace-jump-mode)
-  :config
-  (ace-jump-mode-enable-mark-sync))
+  :ensure t
+  :bind ("C-." . avy-goto-char))
 
-(use-package ace-jump-zap
+(use-package avy-zap
   :diminish t
-  :init
-  (setq azj/zap-function 'kill-region)
-  :bind ("M-z" . ace-jump-zap-to-char))
+  :ensure t
+  :bind ("M-z" . avy-zap-to-char-dwim))
 
 ;;;; function navigation
 (bind-key "C-M-S-a" 'beginning-of-defun)
@@ -896,7 +894,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
@@ -904,4 +902,3 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(winum-face ((t (:weight bold :foreground "red"))) t))
-
