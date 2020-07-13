@@ -749,56 +749,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;;; Languages:
 ;;  ----------
 
-;;;; company-mode
-;; Setup company-mode for autocompletion
-
-;;;;; TODO:
-;; - company-quickhelp uses native mac system for tooltips, get very
-;;   long and unintelligible. Should use gtk version instead of cocoa?
-;; - documentation for some of my code does not show up correctly
-
-(use-package company
-  :ensure t
-  :diminish (company-mode . "")
-  :hook
-  (prog-mode . company-mode)
-  :bind (:map company-active-map
-         ("C-c d" . my/company-show-doc-buffer)
-         )
-  :config
-  ;; disable company-quickhelp until I figure out how to solve TODO
-  (use-package company-quickhelp
-    :disabled t
-    :config (company-quickhelp-mode 0)
-    )
-  (use-package company-auctex
-    :ensure t)
-  (require 'company-auctex)
-  (company-auctex-init)
-  (add-to-list 'company-backends '(company-elisp
-                                   company-anaconda
-                                   company-auctex
-                                   company-lua
-                                   company-math-symbols-unicode)
-               )
-  :custom
-  (company-minimum-prefix-length 2)
-  (company-idle-delay 0.1)
-  (company-show-numbers t)
-  )
-
-;; function to show documentation for functions
-(defun my/company-show-doc-buffer ()
-  "Temporarily show the documentation buffer for the selection."
-  (interactive)
-  (let* ((selected (nth company-selection company-candidates))
-         (doc-buffer (or (company-call-backend 'doc-buffer selected)
-                         (error "No documentation available"))))
-    (with-current-buffer doc-buffer
-      (goto-char (point-min)))
-    (display-buffer doc-buffer t)))
-
-
 ;;;; Flycheck
 ;; Syntax checking
 (use-package flycheck
@@ -890,6 +840,57 @@ Hook this function into `TeX-after-compilation-finished-functions'."
   :custom
   (eldoc-minor-mode-string nil)
   )
+
+
+;;;; company-mode
+;; Setup company-mode for autocompletion
+
+;;;;; TODO:
+;; - company-quickhelp uses native mac system for tooltips, get very
+;;   long and unintelligible. Should use gtk version instead of cocoa?
+;; - documentation for some of my code does not show up correctly
+
+(use-package company
+  :ensure t
+  :diminish (company-mode . "")
+  :hook
+  (prog-mode . company-mode)
+  :bind (:map company-active-map
+         ("C-c d" . my/company-show-doc-buffer)
+         )
+  :config
+  ;; disable company-quickhelp until I figure out how to solve TODO
+  (use-package company-quickhelp
+    :disabled t
+    :config (company-quickhelp-mode 0)
+    )
+  (use-package company-auctex
+    :ensure t)
+  (require 'company-auctex)
+  (company-auctex-init)
+  (add-to-list 'company-backends '(company-elisp
+                                   company-anaconda
+                                   company-auctex
+                                   company-lua
+                                   company-math-symbols-unicode)
+               )
+  :custom
+  (company-minimum-prefix-length 2)
+  (company-idle-delay 0.1)
+  (company-show-numbers t)
+  )
+
+;; function to show documentation for functions
+(defun my/company-show-doc-buffer ()
+  "Temporarily show the documentation buffer for the selection."
+  (interactive)
+  (let* ((selected (nth company-selection company-candidates))
+         (doc-buffer (or (company-call-backend 'doc-buffer selected)
+                         (error "No documentation available"))))
+    (with-current-buffer doc-buffer
+      (goto-char (point-min)))
+    (display-buffer doc-buffer t)))
+
 
 ;;; Custom:
 ;;  -------
