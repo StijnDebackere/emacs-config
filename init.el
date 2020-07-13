@@ -226,6 +226,8 @@
   :config
   (require 'smartparens-config)
   (smartparens-global-mode)
+  ;; prefer this command as backward-kill-word
+  (unbind-key "M-<backspace>" smartparens-mode-map)
   :custom
   (sp-show-pair-from-inside nil)
   )
