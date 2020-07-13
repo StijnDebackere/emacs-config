@@ -216,6 +216,12 @@
       )
 
 
+;;;; Autosaves
+;; save buffers to filename instead of  #-files
+(auto-save-mode 0)
+(auto-save-visited-mode 1)
+
+
 ;;; smartparens:
 ;;  ------------
 (use-package smartparens
