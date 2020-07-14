@@ -428,7 +428,11 @@
   :custom
   ;; separate history items with line of dashes
   (counsel-yank-pop-separator (concat "\n" (make-string 70 ?-) "\n"))
-)
+  )
+
+(use-package ivy-rich
+  :config
+  (ivy-rich-mode 1))
 
 
 ;;; window movement:
@@ -723,9 +727,23 @@ point reaches the beginning or end of the buffer, stop there."
               ((string-equal system-type "darwin")    '(font . "Source Code Pro 14"))
               ((string-equal system-type "gnu/linux") '(font . "Source Code Pro 12"))))
 
+
+;;;; Icons:
+(use-package all-the-icons)
+(use-package all-the-icons-dired)
+(use-package all-the-icons-ivy-rich
+  :init (all-the-icons-ivy-rich-mode 1))
+
+
+
+;;;; powerline:
+(use-package powerline
+  ;; :disable t
+  :config
+  (powerline-default-theme))
+
 ;;;; Default theme:
 (use-package material-theme
-  :ensure t
   :config
   (load-theme 'material t)
   )
@@ -747,12 +765,81 @@ point reaches the beginning or end of the buffer, stop there."
   (global-flycheck-mode)
 )
 
+;;;; company-mode
+;; Setup company-mode for autocompletion
+
+;;;;; TODO:
+;; - company-quickhelp uses native mac system for tooltips, get very
+;;   long and unintelligible. Should use gtk version instead of cocoa?
+;; - documentation for some of my code does not show up correctly
+
+
+(use-package company
+  :diminish (company-mode . "")
+  :hook
+  (prog-mode . company-mode)
+  :bind (:map company-active-map
+         ("C-c d" . my/company-show-doc-buffer)
+         )
+  :config
+  ;; disable company-quickhelp until I figure out how to solve TODO
+  (use-package company-quickhelp
+    :disabled t
+    :config (company-quickhelp-mode 0))
+  (use-package company-anaconda)
+  (use-package company-auctex)
+  (use-package company-lua)
+  (use-package company-math)
+  (require 'company-auctex)
+  (company-auctex-init)
+  (add-to-list 'company-backends '(company-elisp
+                                   company-anaconda
+                                   company-auctex
+                                   company-lua
+                                   company-math)
+               )
+  :custom
+  (company-minimum-prefix-length 2)
+  (company-idle-delay 0.1)
+  (company-show-numbers t)
+  )
+
+;; function to show documentation for functions
+(defun my/company-show-doc-buffer ()
+  "Temporarily show the documentation buffer for the selection."
+  (interactive)
+  (let* ((selected (nth company-selection company-candidates))
+         (doc-buffer (or (company-call-backend 'doc-buffer selected)
+                         (error "No documentation available"))))
+    (with-current-buffer doc-buffer
+      (goto-char (point-min)))
+    (display-buffer doc-buffer t)))
+
+
 ;;;; Python
 ;; Make Emacs into a nice IDE for python development
+;;;;; TODO
+;; - f-string syntax highlighting
 (use-package anaconda-mode
-  :ensure t
   :diminish (anaconda-mode . "")
-  :hook (python-mode . anaconda-mode))
+  :hook (python-mode . anaconda-mode)
+  ;; :custom
+  ;; (python-font-lock-keywords
+  ;;  (append python-font-lock-keywords
+  ;;          '(;; this is the full string.
+  ;;            ;; group 1 is the quote type and a closing quote is matched
+  ;;            ;; group 2 is the string part
+  ;;            ("f\\(['\"]\\{1,3\\}\\)\\(.+?\\)\\1"
+  ;;             ;; these are the {keywords}
+  ;;             ("{[^}]*?}"
+  ;;              ;; Pre-match form
+  ;;              (progn (goto-char (match-beginning 0)) (match-end 0))
+  ;;              ;; Post-match form
+  ;;              (goto-char (match-end 0))
+  ;;              ;; face for this match
+  ;;              (0 font-lock-variable-name-face t))))))
+  )
+
 
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
@@ -765,8 +852,8 @@ point reaches the beginning or end of the buffer, stop there."
 
 (use-package tex
   ;; to get working: https://github.com/jwiegley/use-package/issues/379
-  :defer t
   :ensure auctex
+  :defer t
   :config
   ;; latexmk document compilation
   ;; see http://tex.stackexchange.com/q/10561
@@ -827,56 +914,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
   )
 
 
-;;;; company-mode
-;; Setup company-mode for autocompletion
-
-;;;;; TODO:
-;; - company-quickhelp uses native mac system for tooltips, get very
-;;   long and unintelligible. Should use gtk version instead of cocoa?
-;; - documentation for some of my code does not show up correctly
-
-(use-package company
-  :ensure t
-  :diminish (company-mode . "")
-  :hook
-  (prog-mode . company-mode)
-  :bind (:map company-active-map
-         ("C-c d" . my/company-show-doc-buffer)
-         )
-  :config
-  ;; disable company-quickhelp until I figure out how to solve TODO
-  (use-package company-quickhelp
-    :disabled t
-    :config (company-quickhelp-mode 0)
-    )
-  (use-package company-auctex
-    :ensure t)
-  (require 'company-auctex)
-  (company-auctex-init)
-  (add-to-list 'company-backends '(company-elisp
-                                   company-anaconda
-                                   company-auctex
-                                   company-lua
-                                   company-math-symbols-unicode)
-               )
-  :custom
-  (company-minimum-prefix-length 2)
-  (company-idle-delay 0.1)
-  (company-show-numbers t)
-  )
-
-;; function to show documentation for functions
-(defun my/company-show-doc-buffer ()
-  "Temporarily show the documentation buffer for the selection."
-  (interactive)
-  (let* ((selected (nth company-selection company-candidates))
-         (doc-buffer (or (company-call-backend 'doc-buffer selected)
-                         (error "No documentation available"))))
-    (with-current-buffer doc-buffer
-      (goto-char (point-min)))
-    (display-buffer doc-buffer t)))
-
-
 ;;; Custom:
 ;;  -------
 
@@ -886,7 +923,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
