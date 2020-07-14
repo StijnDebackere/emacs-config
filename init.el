@@ -190,8 +190,11 @@
 ;; make back-ups to the ~/.emacs.d/backups directory
 ;; https://stackoverflow.com/q/151945/
 (defvar --backup-directory (concat user-emacs-directory "backups"))
+(defvar --auto-save-directory (concat user-emacs-directory "autosaves"))
 (if (not (file-exists-p --backup-directory))
         (make-directory --backup-directory t))
+(if (not (file-exists-p --auto-save-directory))
+        (make-directory --auto-save-directory t))
 
 (setq backup-directory-alist `(("." . ,--backup-directory)))
 (setq make-backup-files t               ; backup of a file the first time it is
@@ -205,25 +208,18 @@
       kept-new-versions 9               ; newest versions to keep when a new
                                         ; numbered backup is made (default: 2)
       auto-save-default t               ; auto-save every buffer that visits a file
-      auto-save-file-name-transforms `((".*" "~/.emacs.d/autosaves/" t))
+      auto-save-file-name-transforms `((".*" ,--auto-save-directory t))
       auto-save-timeout 20              ; number of seconds idle time before
                                         ; auto-save (default: 30)
-      auto-save-interval 200            ; number of keystrokes between auto-saves
+      auto-save-interval 300            ; number of keystrokes between auto-saves
                                         ; (default: 300)
       fill-column 100
       )
 
 
-;;;; Autosaves
-;; save buffers to filename instead of  #-files
-(auto-save-mode 0)
-(auto-save-visited-mode 1)
-
-
 ;;; smartparens:
 ;;  ------------
 (use-package smartparens
-  :ensure t
   :diminish smartparens-mode
   :init
   (sp-use-smartparens-bindings)
