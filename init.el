@@ -48,15 +48,14 @@
 
 ;; From use-package README
 (eval-when-compile
-  (require 'use-package))
+  (require 'use-package)
+  (setq use-package-always-ensure t))
 (require 'diminish)                ;; if you use :diminish
 (require 'bind-key)
-
 
 ;;;; Server start-up
 ;; Start the emacs server so files are opened in the opened emacs instance.
 (use-package server
-  :ensure t
   :config
   (progn
     (if (not (server-running-p)) (server-start)))
@@ -86,7 +85,6 @@
 
 ;;;;; path loading
 (use-package exec-path-from-shell
-  :ensure t
   :init
   (exec-path-from-shell-initialize)
   )
@@ -248,11 +246,10 @@
 ;; - Come up with different shortcuts that do not result in me accidentally
 ;;   promoting and demoting LaTeX sections
 (use-package outline
-  :ensure t
+  :ensure nil
   :diminish outline-minor-mode
   :config
   (use-package outline-magic
-    :ensure t
     :bind (:map outline-minor-mode-map
                 ("C-<tab>" . outline-cycle)
                 ("M-<up>" . outline-move-subtree-up)
@@ -313,6 +310,7 @@
 ;;; auto-revert-mode:
 ;;  -----------------
 (use-package autorevert
+  :ensure nil
   :delight auto-revert-mode
   :config
   (global-auto-revert-mode)
@@ -325,6 +323,7 @@
 ;;; dired:
 ;;  ------
 (use-package dired
+  :ensure nil
   :bind (:map dired-mode-map
               ("RET" . dired-find-alternate-file)
               ("^" . (lambda () (interactive) (find-alternate-file "..")))
@@ -338,7 +337,6 @@
 ;;; magit:
 ;;  ------
 (use-package magit
-  :ensure t
   :bind
   ("C-x g" . magit-status)
   :config
@@ -386,11 +384,9 @@
 ;;  ----
 ;;;; TODO
 ;; - Better shortcut for counsel-outline
-;; - 
 ;; - Shortcut for ivy-actions
 ;; - ivy-ag workflow with counsel-occur
 (use-package ivy
-  :ensure t
   :diminish (ivy-mode . "")
   :init
   (defun ivy-toggle-mark ()
@@ -417,8 +413,8 @@
      ("k" kill-buffer "kill")
      ("r" ivy--rename-buffer-action "rename")))
   )
+
 (use-package counsel
-  :ensure t
   :bind
   (;; use swiper instead of isearch
    ;; if you press M-j, word at point is inserted
@@ -446,7 +442,6 @@
 ;; Navigate windows by number.
 
 (use-package winum
-  :ensure t
   :custom
   (winum-keymap
    (let ((map (make-sparse-keymap)))
@@ -475,7 +470,6 @@
 ;; Move buffers between windows.
 
 (use-package buffer-move
-  :ensure t
   :bind
   (("<C-M-S-up>" . 'buf-move-up)
    ("<C-M-S-down>" . 'buf-move-down)
@@ -596,12 +590,10 @@ point reaches the beginning or end of the buffer, stop there."
 ;; (global-unset-key (kbd "C-."))
 (use-package avy
   :diminish t
-  :ensure t
   :bind ("C-." . avy-goto-char))
 
 (use-package avy-zap
   :diminish t
-  :ensure t
   :bind ("M-z" . avy-zap-to-char-dwim))
 
 ;;;; function navigation
@@ -675,7 +667,6 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; multiple-cursors
 (use-package multiple-cursors
-  :ensure t
   :bind
   ("C->" . mc/mark-next-like-this)
   ("C-<" . mc/mark-previous-like-this)
@@ -694,7 +685,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;; change vr--command-python-default python -> python3, no unicode errors
 ;; need to run python3 for *Packages* error
 ;; (use-package visual-regexp-steroids
-;;   :ensure t
 ;;   :bind
 ;;   ("C-c r" . vr/replace)
 ;;   ("C-c q" . vr/query-replace)
@@ -752,7 +742,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;;;; Flycheck
 ;; Syntax checking
 (use-package flycheck
-  :ensure t
   :custom
   (flycheck-python-flake8-executable "python3")
   (flycheck-python-pycompile-executable "python3")
