@@ -345,6 +345,8 @@
   (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256")))
   )
 
+(use-package forge
+  :after magit)
 
 ;;; ediff:
 ;;  ------
@@ -378,6 +380,11 @@
                                  '((tramp-parse-sconfig "/etc/ssh_config")
                                    (tramp-parse-sconfig "~/.ssh/config")))
   )
+
+
+;;; wgrep:
+;;  ------
+(use-package wgrep-ag)
 
 
 ;;; ivy:
@@ -422,7 +429,7 @@
    ("M-x" . counsel-M-x)
    ("C-x C-f" . counsel-find-file)
    ("M-i" . counsel-imenu)
-   ("C-c C-o" . counsel-outline)
+   ("C-c C-t" . counsel-outline)
    ;; Still not completely happy with this one
    ;; not the same as helm-show-kill-ring
    ("M-y" . counsel-yank-pop)
@@ -922,7 +929,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(package-selected-packages
-   '(visual-regexp-steroids super-save company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(wgrep-ag forge visual-regexp-steroids super-save company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
