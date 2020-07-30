@@ -185,6 +185,8 @@
 (setq display-time-default-load-average nil)
 (display-time-mode 1)
 
+;; Do not ask to kill processes
+(setq confirm-kill-processes nil)
 
 ;;;; Backups
 ;; make back-ups to the ~/.emacs.d/backups directory
@@ -785,7 +787,7 @@ point reaches the beginning or end of the buffer, stop there."
   :hook
   (prog-mode . company-mode)
   :bind (:map company-active-map
-         ("C-c d" . my/company-show-doc-buffer)
+              ("C-i" . company-indent-or-complete-common)
          )
   :config
   ;; disable company-quickhelp until I figure out how to solve TODO
@@ -810,16 +812,16 @@ point reaches the beginning or end of the buffer, stop there."
   (company-show-numbers t)
   )
 
-;; function to show documentation for functions
-(defun my/company-show-doc-buffer ()
-  "Temporarily show the documentation buffer for the selection."
-  (interactive)
-  (let* ((selected (nth company-selection company-candidates))
-         (doc-buffer (or (company-call-backend 'doc-buffer selected)
-                         (error "No documentation available"))))
-    (with-current-buffer doc-buffer
-      (goto-char (point-min)))
-    (display-buffer doc-buffer t)))
+;; ;; function to show documentation for functions
+;; (defun my/company-show-doc-buffer ()
+;;   "Temporarily show the documentation buffer for the selection."
+;;   (interactive)
+;;   (let* ((selected (nth company-selection company-candidates))
+;;          (doc-buffer (or (company-call-backend 'doc-buffer selected)
+;;                          (error "No documentation available"))))
+;;     (with-current-buffer doc-buffer
+;;       (goto-char (point-min)))
+;;     (display-buffer doc-buffer t)))
 
 
 ;;;; Python
@@ -828,7 +830,11 @@ point reaches the beginning or end of the buffer, stop there."
 ;; - f-string syntax highlighting
 (use-package anaconda-mode
   :diminish (anaconda-mode . "")
-  :hook (python-mode . anaconda-mode)
+  :hook
+  (python-mode . anaconda-mode)
+  (python-mode . anaconda-eldoc-mode)
+  :custom
+  (python-shell-interpreter "python3")
   ;; :custom
   ;; (python-font-lock-keywords
   ;;  (append python-font-lock-keywords
