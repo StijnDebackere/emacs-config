@@ -8,7 +8,6 @@
 ;; different places on the internet, usually source links are included
 ;; TODO
 ;; - look into epkg + borg setup to use github packages instead of elpa
-;; - organize ivy switch buffer in open buffers and recently closed files
 
 ;;; Code:
 ;;  -----
@@ -391,10 +390,6 @@
 
 ;;; ivy:
 ;;  ----
-;;;; TODO
-;; - Better shortcut for counsel-outline
-;; - Shortcut for ivy-actions
-;; - ivy-ag workflow with counsel-occur
 (use-package ivy
   :diminish (ivy-mode . "")
   :init
@@ -763,7 +758,13 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; Flycheck
 ;; Syntax checking
+;; Pylint: generate .pylintrc with pylint --generate-rcfile > ~/.pylintrc
+;; Under [MESSAGES CONTROL] disable
+;; R0913, R0902, R0914, R0904, C0103
+;; this will disable warnings about too many arguments/variables/etc.
 (use-package flycheck
+  :init
+  (setq-default flycheck-disabled-checkers '(python-mypy))
   :custom
   (flycheck-python-flake8-executable "python3")
   (flycheck-python-pycompile-executable "python3")
@@ -779,8 +780,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;;;;; TODO:
 ;; - company-quickhelp uses native mac system for tooltips, get very
 ;;   long and unintelligible. Should use gtk version instead of cocoa?
-;; - documentation for some of my code does not show up correctly
-
 
 (use-package company
   :diminish (company-mode . "")
@@ -835,21 +834,6 @@ point reaches the beginning or end of the buffer, stop there."
   (python-mode . anaconda-eldoc-mode)
   :custom
   (python-shell-interpreter "python3")
-  ;; :custom
-  ;; (python-font-lock-keywords
-  ;;  (append python-font-lock-keywords
-  ;;          '(;; this is the full string.
-  ;;            ;; group 1 is the quote type and a closing quote is matched
-  ;;            ;; group 2 is the string part
-  ;;            ("f\\(['\"]\\{1,3\\}\\)\\(.+?\\)\\1"
-  ;;             ;; these are the {keywords}
-  ;;             ("{[^}]*?}"
-  ;;              ;; Pre-match form
-  ;;              (progn (goto-char (match-beginning 0)) (match-end 0))
-  ;;              ;; Post-match form
-  ;;              (goto-char (match-end 0))
-  ;;              ;; face for this match
-  ;;              (0 font-lock-variable-name-face t))))))
   )
 
 
