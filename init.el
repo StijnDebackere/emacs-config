@@ -900,10 +900,21 @@ point reaches the beginning or end of the buffer, stop there."
   (add-to-list 'TeX-command-list '("LaTeX Make" "latexmk -pdf -f %t" TeX-run-TeX))
   (add-to-list 'TeX-command-list '("View" "open %s.pdf" TeX-run-command))
   (add-hook 'TeX-mode-hook (lambda () (setq TeX-command-default "LaTeX Make")))
+
   ;; enable folding of environments
   (add-hook 'LaTeX-mode-hook (lambda ()
 			       (TeX-fold-mode 1)))
   (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
+  (add-hook 'TeX-after-compilation-finished-functions #'my/tex-close-TeX-buffer)
+
+  ;; Close tex-output buffer if there are only warnings after compilation
+  ;; see https://emacs.stackexchange.com/q/38258/
+  (defcustom TeX-buf-close-at-warnings-only t
+    "Close TeX buffer if there are only warnings."
+    :group 'TeX-output
+    :type 'boolean)
+
+
   :custom
   ;; parse tex files on load and save
   (TeX-auto-save t)
@@ -911,15 +922,7 @@ point reaches the beginning or end of the buffer, stop there."
   (preview-auto-cache-preamble 1)
   ;; do not change font height or width in latex files
   (font-latex-fontify-script nil)
-  (font-latex-fontify-sectioning 'color)
-  )
-
-;; Close tex-output buffer if there are only warnings after compilation
-;; see https://emacs.stackexchange.com/q/38258/
-(defcustom TeX-buf-close-at-warnings-only t
-  "Close TeX buffer if there are only warnings."
-  :group 'TeX-output
-  :type 'boolean)
+  (font-latex-fontify-sectioning 'color))
 
 (defun my/tex-close-TeX-buffer (_output)
   "Close compilation buffer if there are no errors.
@@ -935,8 +938,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
           (cl-loop for win in (window-list)
                    if (eq (window-buffer win) (current-buffer))
                    do (kill-buffer (window-buffer win))))))))
-
-(add-hook 'TeX-after-compilation-finished-functions #'my-tex-close-TeX-buffer)
 
 
 ;;;; Lua
