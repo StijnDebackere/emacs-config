@@ -302,10 +302,12 @@
           ((executable-find "aspell")
            ;; you may also need `ispell-extra-args'
            (setq ispell-program-name "aspell"))
+          )
           ((executable-find "hunspell")
            (setq ispell-program-name "hunspell")
-           (ispell-program-name "hunspell")
-           (ispell-really-hunspell t))))
+           (setq ispell-really-hunspell t)
+           )
+         )
   (ispell-dictionary "british-ize-w_accents")
   :config
   (defun my/flyspell-check-next-highlighted-word ()
