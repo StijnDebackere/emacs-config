@@ -840,18 +840,31 @@ point reaches the beginning or end of the buffer, stop there."
 ;;     (display-buffer doc-buffer t)))
 
 
-;;;; Python
-;; Make Emacs into a nice IDE for python development
-;;;;; TODO
-;; - f-string syntax highlighting
-(use-package anaconda-mode
-  :diminish (anaconda-mode . "")
-  :hook
-  (python-mode . anaconda-mode)
-  (python-mode . anaconda-eldoc-mode)
-  :custom
-  (python-shell-interpreter "python3")
-  )
+;;;; lsp - language server protocol
+;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+(setq lsp-keymap-prefix "s-l")
+
+(use-package lsp-mode
+    :commands lsp)
+
+;; optionally
+(use-package lsp-ui :commands lsp-ui-mode)
+;; if you are ivy user
+(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
+(use-package lsp-treemacs :commands lsp-treemacs-errors-list)
+
+;; optionally if you want to use debugger
+(use-package dap-mode)
+;; (use-package dap-LANGUAGE) to load the dap adapter for your language
+
+(use-package lsp-python-ms
+  :ensure t
+  :init (setq lsp-python-ms-auto-install-server t)
+  :hook (python-mode . (lambda ()
+                          (require 'lsp-python-ms)
+                          (lsp))))  ; or lsp-deferred
+
+(use-package company-lsp :commands company-lsp)
 
 
 ;;;; LaTeX
