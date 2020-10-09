@@ -353,7 +353,13 @@
   :bind
   ("C-x g" . magit-status)
   :config
+  ;; start a pinentry session for automatic signing of commits
+  ;; -> requires allow-emacs-pinentry & allow-loopback-pinentry in gpg-agent.conf
+  ;; see https://stackoverflow.com/q/60812866/
+  (pinentry-start)
   (global-auto-revert-mode 1)
+  (setq-default magit-git-environment
+                (cons "PINENTRY_USER_DATA=USER_CURSES=0" magit-git-environment))
   :custom
   (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256")))
   )
