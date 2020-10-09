@@ -285,27 +285,37 @@
 ;; - ispell-hunspell-dict-paths-alist contains right dictionaries, but
 ;;   ispell-hunspell-dictionary-alist does not seem to load them
 ;; - check https://facility9.com/2015/01/unsetting-key-bindings-in-emacs/
-;; (use-package flyspell
-;;   :hook
-;;   (text-mode . flyspell-mode)
-;;   (org-mode . flyspell-mode)
-;;   (TeX-mode . flyspell-mode)
-;;   (prog-mode . flyspell-prog-mode)
-;;   (emacs-lisp-mode . flyspell-prog-mode)
-;;   (python-mode . flyspell-prog-mode)
-;;   :custom
-;;   ;; (setenv "LANG" "en_GB.UTF-8")
-;;   (ispell-program-name "hunspell")
-;;   (ispell-really-hunspell t)
-;;   (ispell-dictionary "en_GB")
-;;   :init
-;;   )
+(use-package flyspell
+  :hook
+  (text-mode . flyspell-mode)
+  (org-mode . flyspell-mode)
+  (TeX-mode . flyspell-mode)
+  (prog-mode . flyspell-prog-mode)
+  (emacs-lisp-mode . flyspell-prog-mode)
+  (python-mode . flyspell-prog-mode)
+  :bind
+  ("C-c w" . my/flyspell-check-next-highlighted-word)
+  ("C-c b" . flyspell-buffer)
+  :custom
+  ;; (setenv "LANG" "en_GB.UTF-8")
+  (progn (cond
+          ((executable-find "aspell")
+           ;; you may also need `ispell-extra-args'
+           (setq ispell-program-name "aspell"))
+          ((executable-find "hunspell")
+           (setq ispell-program-name "hunspell")
+           (ispell-program-name "hunspell")
+           (ispell-really-hunspell t))))
+  (ispell-dictionary "british-ize-w_accents")
+  :config
+  (defun my/flyspell-check-next-highlighted-word ()
+    "Custom function to spell check next highlighted word."
+    (interactive)
+    (flyspell-goto-next-error)
+    (ispell-word))
+  (unbind-key "C-." flyspell-mode-map)
+  )
 
-;; (defun my/flyspell-check-next-highlighted-word ()
-;;   "Custom function to spell check next highlighted word."
-;;   (interactive)
-;;   (flyspell-goto-next-error)
-;;   (ispell-word))
 
 
 ;;; auto-revert-mode:
