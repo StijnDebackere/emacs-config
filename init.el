@@ -963,9 +963,36 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(ansi-color-faces-vector
+   [default default default italic underline success warning error])
+ '(custom-safe-themes
+   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
+ '(fci-rule-color "#ECEFF1")
+ '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(wgrep-ag forge visual-regexp-steroids super-save company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
- '(smartparens-global-mode t))
+   '(company-lsp lsp-python-ms lsp-latex dap-mode lsp-treemacs lsp-ivy lsp-ui lsp-mode solarized-theme tramp pinentry wgrep-ag forge visual-regexp-steroids super-save company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+ '(smartparens-global-mode t)
+ '(vc-annotate-background nil)
+ '(vc-annotate-color-map
+   '((20 . "#B71C1C")
+     (40 . "#FF5722")
+     (60 . "#FFA000")
+     (80 . "#558b2f")
+     (100 . "#00796b")
+     (120 . "#2196f3")
+     (140 . "#4527A0")
+     (160 . "#B71C1C")
+     (180 . "#FF5722")
+     (200 . "#FFA000")
+     (220 . "#558b2f")
+     (240 . "#00796b")
+     (260 . "#2196f3")
+     (280 . "#4527A0")
+     (300 . "#B71C1C")
+     (320 . "#FF5722")
+     (340 . "#FFA000")
+     (360 . "#558b2f")))
+ '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
