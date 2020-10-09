@@ -613,7 +613,6 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "C-a" 'my/smarter-move-beginning-of-line)
 
 ;;;; avy
-;; (global-unset-key (kbd "C-."))
 (use-package avy
   :diminish t
   :bind ("C-." . avy-goto-char))
