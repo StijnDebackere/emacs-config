@@ -867,6 +867,20 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package company-lsp :commands company-lsp)
 
 
+;; ;;;; Python
+;; ;; Make Emacs into a nice IDE for python development
+;; ;;;;; TODO
+;; ;; - f-string syntax highlighting
+;; (use-package anaconda-mode
+;;   :diminish (anaconda-mode . "")
+;;   :hook
+;;   (python-mode . anaconda-mode)
+;;   (python-mode . anaconda-eldoc-mode)
+;;   :custom
+;;   (python-shell-interpreter "python3")
+;;   )
+
+
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
 (use-package reftex
