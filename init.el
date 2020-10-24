@@ -413,6 +413,20 @@
 ;;  ------
 (use-package wgrep-ag)
 
+;;; projectile:
+;;  ----
+(use-package projectile
+  :bind
+  (:map projectile-mode-map
+        ("s-p" . 'projectile-command-map)
+        ()
+        )
+  :init
+  (projectile-mode t)
+  :custom
+  (projectile-completion-system 'ivy)
+
+  )
 
 ;;; ivy:
 ;;  ----
