@@ -286,6 +286,7 @@
 ;;   ispell-hunspell-dictionary-alist does not seem to load them
 ;; - check https://facility9.com/2015/01/unsetting-key-bindings-in-emacs/
 (use-package flyspell
+  :diminish (flyspell-mode . "")
   :hook
   (text-mode . flyspell-mode)
   (org-mode . flyspell-mode)
@@ -364,8 +365,8 @@
   (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256")))
   )
 
-(use-package forge
-  :after magit)
+;; (use-package forge
+;;   :after magit)
 
 ;;; ediff:
 ;;  ------
@@ -935,8 +936,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 
 ;;;; elisp
 (use-package eldoc
-  :custom
-  (eldoc-minor-mode-string nil)
+  :diminish (eldoc-mode . "")
   )
 
 
