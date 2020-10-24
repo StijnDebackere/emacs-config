@@ -392,7 +392,14 @@
 
 ;;; tramp:
 ;;  ------
+(defvar my/purmer-conda-path "/net/purmer/data1/debackere/miniconda3/bin/")
+(defvar my/purmer-ms-path "/home/debackere/.emacs.d/.cache/lsp/mspyls/")
 (use-package tramp
+  :demand
+  :config
+  ;; need to add conda path for remote pyls server
+  (add-to-list 'tramp-remote-path my/purmer-conda-path)
+  (add-to-list 'tramp-remote-path my/purmer-ms-path)
   :custom
   (tramp-default-method "ssh")
   (tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
