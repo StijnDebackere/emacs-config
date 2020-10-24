@@ -930,6 +930,11 @@ Hook this function into `TeX-after-compilation-finished-functions'."
                    if (eq (window-buffer win) (current-buffer))
                    do (kill-buffer (window-buffer win))))))))
 
+;;;; python
+(when (executable-find "ipython")
+  (setq python-shell-interpreter "ipython")
+  (setq python-shell-interpreter-args "--simple-prompt -i")
+  )
 
 ;;;; Lua
 ;; Requires lua and luarocks installations, available through Homebrew
