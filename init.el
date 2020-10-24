@@ -740,23 +740,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;; Themes:
 ;;  -------
-(defun switch-theme (theme)
-  "Disable any currently active themes and load THEME."
-  ;; This interactive call is taken from `load-theme'
-  (interactive
-   (list
-    (intern (completing-read "Load custom theme: "
-                             (mapc 'symbol-name
-                                   (custom-available-themes))))))
-  (let ((enabled-themes custom-enabled-themes))
-    (mapc #'disable-theme custom-enabled-themes)
-    (load-theme theme t)))
-
-(defun disable-active-themes ()
-  "Disable any currently active themes listed in `custom-enabled-themes'."
-  (interactive)
-  (mapc #'disable-theme custom-enabled-themes))
-
+(defalias 'switch-theme 'counsel-load-theme)
 
 ;; # You may need to run these two lines if you haven't set up Homebrew
 ;; # Cask and its fonts formula.
