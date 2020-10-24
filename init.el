@@ -65,9 +65,9 @@
   ;; delete files by moving them to the trash
   (setq delete-by-moving-to-trash t)
   (setq trash-directory "~/.Trash")
-  
+
   ;; set option as meta
-  (setq mac-command-modifier nil)
+  (setq mac-command-modifier 'super)
   (setq mac-option-modifier 'meta)
 
   ;; adjust mouse scrolling down
@@ -758,128 +758,113 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; powerline:
 (use-package powerline
-  ;; :disable t
+  :disabled
   :config
   (powerline-default-theme))
 
 ;;;; Default theme:
-(use-package material-theme
+(use-package material-theme)
+(use-package dracula-theme)
+(use-package solarized-theme)
+(use-package gotham-theme
   :config
   (load-theme 'material t)
   )
 
 
-
 ;;; Languages:
 ;;  ----------
-
-;;;; Flycheck
-;; Syntax checking
-;; Pylint: generate .pylintrc with pylint --generate-rcfile > ~/.pylintrc
-;; Under [MESSAGES CONTROL] disable
-;; R0913, R0902, R0914, R0904, C0103
-;; this will disable warnings about too many arguments/variables/etc.
-(use-package flycheck
-  :init
-  (setq-default flycheck-disabled-checkers '(python-mypy))
-  :custom
-  (flycheck-python-flake8-executable "python3")
-  (flycheck-python-pycompile-executable "python3")
-  (flycheck-python-pylint-executable "python3")
-  (flycheck-html-tidy-executable "tidy")
-  :config
-  (global-flycheck-mode)
-)
-
 ;;;; company-mode
 ;; Setup company-mode for autocompletion
-
-;;;;; TODO:
-;; - company-quickhelp uses native mac system for tooltips, get very
-;;   long and unintelligible. Should use gtk version instead of cocoa?
 
 (use-package company
   :diminish (company-mode . "")
   :hook
   (prog-mode . company-mode)
   :bind (:map company-active-map
-              ("C-i" . company-indent-or-complete-common)
+              ;; from https://github.com/company-mode/company-mode/issues/246#issuecomment-65064467
+              ;; pressing TAB twice results in autocompletion of the selected item
+              ("TAB" . company-complete)
+              ;; unbind return from completion
+              ("<tab>")
+              ("RET")
+              ("<return>")
          )
-  :config
-  ;; disable company-quickhelp until I figure out how to solve TODO
-  (use-package company-quickhelp
-    :disabled t
-    :config (company-quickhelp-mode 0))
-  (use-package company-anaconda)
-  (use-package company-auctex)
-  (use-package company-lua)
-  (use-package company-math)
-  (require 'company-auctex)
-  (company-auctex-init)
-  (add-to-list 'company-backends '(company-elisp
-                                   company-anaconda
-                                   company-auctex
-                                   company-lua
-                                   company-math)
-               )
   :custom
   (company-minimum-prefix-length 2)
-  (company-idle-delay 0.1)
+  (company-idle-delay 0.05)
   (company-show-numbers t)
   )
 
-;; ;; function to show documentation for functions
-;; (defun my/company-show-doc-buffer ()
-;;   "Temporarily show the documentation buffer for the selection."
-;;   (interactive)
-;;   (let* ((selected (nth company-selection company-candidates))
-;;          (doc-buffer (or (company-call-backend 'doc-buffer selected)
-;;                          (error "No documentation available"))))
-;;     (with-current-buffer doc-buffer
-;;       (goto-char (point-min)))
-;;     (display-buffer doc-buffer t)))
+(use-package company-box
+  :diminish (company-box-mode . "")
+  :hook (company-mode . company-box-mode))
 
+;;;; Flycheck
+(use-package flycheck
+  :diminish (flycheck-mode . "")
+  :init
+  (global-flycheck-mode)
+  )
 
-;;;; lsp - language server protocol
-;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+;;;; lsp
 (setq lsp-keymap-prefix "s-l")
+;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
+(setq read-process-output-max (* 1024 1024))
+(setq gc-cons-threshold 64000000)
 
 (use-package lsp-mode
-    :commands lsp)
-
-;; optionally
-(use-package lsp-ui :commands lsp-ui-mode)
-;; if you are ivy user
-(use-package lsp-ivy :commands lsp-ivy-workspace-symbol)
-(use-package lsp-treemacs :commands lsp-treemacs-errors-list)
-
-;; optionally if you want to use debugger
-(use-package dap-mode)
-;; (use-package dap-LANGUAGE) to load the dap adapter for your language
+  :diminish (yas-minor-mode . "")
+  :hook
+  (python-mode . lsp)
+  ;; enable yas-minor-mode on lsp-mode to fix completion error
+  (lsp-mode . yas-minor-mode)
+  :commands lsp
+  :config
+  ;; configuration of remote python language server
+  (lsp-register-client
+   (make-lsp-client :new-connection
+                    ;; (lsp-tramp-connection "Microsoft.Python.Language Server")
+                    (lsp-tramp-connection "pyls")
+                    :major-modes '(python-mode)
+                    :remote? t
+                    :server-id 'pyls-remote))
+  :custom
+  (lsp-prefer-capf t)
+  (lsp-idle-delay 0.5)
+  (lsp-enable-snippet nil)
+  ;; (lsp-auto-guess-root t)
+  )
 
 (use-package lsp-python-ms
-  :ensure t
-  :init (setq lsp-python-ms-auto-install-server t)
+  :init
+  (setq lsp-python-ms-auto-install-server t)
+  (setq lsp-python-ms-python-executable "python3")
   :hook (python-mode . (lambda ()
                           (require 'lsp-python-ms)
-                          (lsp))))  ; or lsp-deferred
+                          (lsp))))
 
-(use-package company-lsp :commands company-lsp)
+;; ;; to make this work, run npm install -g pyright
+;; (use-package lsp-pyright
+;;   :hook (python-mode . (lambda ()
+;;                           (require 'lsp-pyright)
+;;                           (lsp))))
 
+(use-package lsp-ivy
+  :commands lsp-ivy-workspace-symbol
+  ;; :bind ("M-i" . lsp-ivy-workspace-symbol)
+  )
+(use-package lsp-ui
+  :disabled
+  :commands lsp-ui-mode
+  :config
+  (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
+  )
 
-;; ;;;; Python
-;; ;; Make Emacs into a nice IDE for python development
-;; ;;;;; TODO
-;; ;; - f-string syntax highlighting
-;; (use-package anaconda-mode
-;;   :diminish (anaconda-mode . "")
-;;   :hook
-;;   (python-mode . anaconda-mode)
-;;   (python-mode . anaconda-eldoc-mode)
-;;   :custom
-;;   (python-shell-interpreter "python3")
-;;   )
-
+;; ;; optionally if you want to use debugger
+;; (use-package dap-mode)
+;; ;; (use-package dap-LANGUAGE) to load the dap adapter for your language
 
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
@@ -965,12 +950,14 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If there is more than one, they won't work right.
  '(ansi-color-faces-vector
    [default default default italic underline success warning error])
+ '(ansi-color-names-vector
+   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
  '(custom-safe-themes
    '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(company-lsp lsp-python-ms lsp-latex dap-mode lsp-treemacs lsp-ivy lsp-ui lsp-mode solarized-theme tramp pinentry wgrep-ag forge visual-regexp-steroids super-save company-math company-lua company-anaconda lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap company-auctex smartparens latex auctex tex material-theme anaconda-mode flycheck company multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(lsp-python-ms lsp-pyright ag gotham-theme dracula-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
