@@ -465,7 +465,6 @@
    ("C-s" . swiper)
    ("M-x" . counsel-M-x)
    ("C-x C-f" . counsel-find-file)
-   ("M-i" . counsel-imenu)
    ("C-c C-t" . counsel-outline)
    ;; Still not completely happy with this one
    ;; not the same as helm-show-kill-ring
@@ -858,8 +857,16 @@ point reaches the beginning or end of the buffer, stop there."
 
 (use-package lsp-ivy
   :commands lsp-ivy-workspace-symbol
-  ;; :bind ("M-i" . lsp-ivy-workspace-symbol)
+  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
   )
+
+(defun lsp-ivy-workspace-symbol-or-imenu (arg)
+  (interactive "P")
+  (if lsp-mode
+      (lsp-ivy-workspace-symbol arg)
+    (counsel-imenu))
+  )
+
 (use-package lsp-ui
   :disabled
   :commands lsp-ui-mode
