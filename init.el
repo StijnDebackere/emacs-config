@@ -875,6 +875,9 @@ point reaches the beginning or end of the buffer, stop there."
 
 (use-package lsp-ui
   :commands lsp-ui-mode
+  :bind
+  ("s->" . lsp-ui-find-next-reference)
+  ("s-<" . lsp-ui-find-prev-reference)
   :config
   (lsp-ui-peek-enable 1)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
