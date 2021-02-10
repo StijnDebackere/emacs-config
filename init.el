@@ -873,6 +873,8 @@ point reaches the beginning or end of the buffer, stop there."
     (counsel-imenu))
   )
 
+(bind-key "C-c C-j" 'counsel-imenu)
+
 (use-package lsp-ui
   :commands lsp-ui-mode
   :bind
