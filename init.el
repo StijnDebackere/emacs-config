@@ -948,7 +948,7 @@ point reaches the beginning or end of the buffer, stop there."
   :config
   ;; latexmk document compilation
   ;; see http://tex.stackexchange.com/q/10561
-  (add-to-list 'TeX-command-list '("LaTeX Make" "latexmk -pdf -f %t" TeX-run-TeX))
+  (add-to-list 'TeX-command-list '("LaTeX Make" "latexmk -lualatex -f %t" TeX-run-TeX))
   (add-to-list 'TeX-command-list '("View" "open %s.pdf" TeX-run-command))
   (add-hook 'TeX-mode-hook (lambda () (setq TeX-command-default "LaTeX Make")))
 
