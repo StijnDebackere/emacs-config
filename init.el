@@ -358,6 +358,7 @@
 (use-package magit
   :bind
   ("C-x g" . magit-status)
+  :after (pinentry)
   :config
   ;; start a pinentry session for automatic signing of commits
   ;; -> requires allow-emacs-pinentry & allow-loopback-pinentry in gpg-agent.conf
@@ -817,6 +818,8 @@ point reaches the beginning or end of the buffer, stop there."
   (global-flycheck-mode)
   )
 
+(use-package yasnippet)
+
 ;;;; lsp
 (setq lsp-keymap-prefix "s-l")
 ;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
@@ -825,6 +828,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 (use-package lsp-mode
   :diminish (yas-minor-mode . "")
+  :after (yasnippet)
   :hook
   (python-mode . lsp)
   ;; enable yas-minor-mode on lsp-mode to fix completion error
@@ -839,39 +843,77 @@ point reaches the beginning or end of the buffer, stop there."
                     :major-modes '(python-mode)
                     :remote? t
                     :server-id 'pyls-remote))
-  :custom
-  (lsp-prefer-capf t)
-  (lsp-idle-delay 0.5)
-  (lsp-enable-snippet nil)
-  (lsp-modeline-code-actions-mode 1)
-  ;; (lsp-auto-guess-root t)
+ :config
+  ;; extras
+  (defun lsp-ivy-workspace-symbol-or-imenu (arg)
+    (interactive "P")
+    (if lsp-mode
+        (lsp-ivy-workspace-symbol arg)
+      (counsel-imenu))
+    )
+
+  (use-package lsp-ivy
+    :commands lsp-ivy-workspace-symbol
+    :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
+    )
+  ;; (use-package lsp-python-ms
+  ;;   :ensure t
+  ;;   :init (setq lsp-python-ms-auto-install-server t)
+  ;;   :hook (python-mode . (lambda ()
+  ;;                          (require 'lsp-python-ms)
+  ;;                          (lsp))))  ; or lsp-deferred
+  ;; (use-package lsp-jedi
+  ;;   :ensure t
+  ;;   :config
+  ;;   (with-eval-after-load "lsp-mode"
+  ;;     (add-to-list 'lsp-disabled-clients 'pyls)
+  ;;     (add-to-list 'lsp-enabled-clients 'jedi)))
+  ;; to make this work, run npm install -g pyright
+  (use-package lsp-pyright
+    :hook (python-mode . (lambda ()
+                           (require 'lsp-pyright)
+                           (lsp)))
+    ;; :config
+    ;; (lsp-pyright-python-executable-command "python3")
+    )
+  (use-package lsp-ui
+    :commands lsp-ui-mode
+    :bind
+    ("s->" . lsp-ui-find-next-reference)
+    ("s-<" . lsp-ui-find-prev-reference)
+    :config
+    (lsp-ui-peek-enable 1)
+    (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
+    (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
+    )
   )
 
-(use-package lsp-python-ms
-  :init
-  (setq lsp-python-ms-auto-install-server t)
-  (setq lsp-python-ms-python-executable "python3")
-  :hook (python-mode . (lambda ()
-                          (require 'lsp-python-ms)
-                          (lsp))))
+(bind-key "C-c C-j" 'counsel-imenu)
 
+(use-package pyvenv-auto
+  :init (pyvenv-auto-mode t)
+  :diminish (pyvenv-auto-mode . ""))
+
+;; (use-package lsp-python-ms
+;;   :init
+;;   (setq lsp-python-ms-auto-install-server t)
+;;   (setq lsp-python-ms-python-executable "python3")
+;;   :hook (python-mode . (lambda ()
+;;                           (require 'lsp-python-ms)
+;;                           (lsp))))
 ;; ;; to make this work, run npm install -g pyright
 ;; (use-package lsp-pyright
 ;;   :hook (python-mode . (lambda ()
 ;;                           (require 'lsp-pyright)
 ;;                           (lsp))))
 
-(use-package lsp-ivy
-  :commands lsp-ivy-workspace-symbol
-  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
-  )
 
-(defun lsp-ivy-workspace-symbol-or-imenu (arg)
-  (interactive "P")
-  (if lsp-mode
-      (lsp-ivy-workspace-symbol arg)
-    (counsel-imenu))
-  )
+;; (defun lsp-ivy-workspace-symbol-or-imenu (arg)
+;;   (interactive "P")
+;;   (if lsp-mode
+;;       (lsp-ivy-workspace-symbol arg)
+;;     (counsel-imenu))
+;;   )
 
 (bind-key "C-c C-j" 'counsel-imenu)
 
@@ -949,6 +991,8 @@ Hook this function into `TeX-after-compilation-finished-functions'."
                    do (kill-buffer (window-buffer win))))))))
 
 ;;;; python
+;; (use-package python-black
+;;   :diminish (python-black-on-save))
 (when (executable-find "ipython")
   (setq python-shell-interpreter "ipython")
   (setq python-shell-interpreter-args "--simple-prompt -i")
@@ -980,12 +1024,13 @@ Hook this function into `TeX-after-compilation-finished-functions'."
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
    (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
+ '(company-show-quick-access t nil nil "Customized with use-package company")
  '(custom-safe-themes
    '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(yaml-mode ws-butler keychain-environment lsp-python-ms ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(pyvenv-auto lsp-pyright lsp-jedi yaml-mode ws-butler keychain-environment lsp-python-ms ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
