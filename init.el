@@ -4,14 +4,10 @@
 
 ;;; Commentary:
 
-;; Emacs init file pieced together by Stijn Debackere from
-;; different places on the internet, usually source links are included
-;; TODO
-;; - look into epkg + borg setup to use github packages instead of elpa
+;; Emacs init file pieced together from different places on the
+;; internet, usually source links are included
 
 ;;; Code:
-;;  -----
-
 
 ;;; Startup:
 ;;  --------
@@ -22,6 +18,7 @@
   (scroll-bar-mode -1)
   (tooltip-mode -1))
 
+(add-to-list 'default-frame-alist '(undecorated-round . t))
 (setq inhibit-startup-message t)
 (setq initial-scratch-message "")
 
@@ -82,13 +79,6 @@
 
   )
 
-;;;;; path loading
-(use-package exec-path-from-shell
-  :init
-  (exec-path-from-shell-initialize)
-  )
-
-;;;;; send dir to Finder and Iterm
 (defun open-dir-in-finder ()
   "Open a new Finder window to the path of the current buffer."
   (interactive)
@@ -107,6 +97,11 @@
 (bind-key "C-c o f" 'open-dir-in-finder)
 (bind-key "C-c o t" 'open-dir-in-iterm)
 
+;;;;; path loading
+(use-package exec-path-from-shell
+  :init
+  (exec-path-from-shell-initialize)
+  )
 
 ;;;; Sane defaults
 ;; Amalgamation of
@@ -181,7 +176,6 @@
 
 ;; Show time in emacs
 (setq display-time-24hr-format 1)
-(setq display-time-default-load-average nil)
 (display-time-mode 1)
 
 ;; Do not ask to kill processes
@@ -217,18 +211,21 @@
       fill-column 100
       )
 
+;;; automatic whitespace removal
 (use-package ws-butler
   :diminish ws-butler-mode
   :hook (prog-mode . ws-butler-mode)
   )
 
+
+;;; save emacs buffer upon loss of focus
 (use-package super-save
   :diminish super-save-mode
   :config
   (super-save-mode +1))
 
-;;; smartparens:
-;;  ------------
+
+;;; smartparens
 (use-package smartparens
   :diminish smartparens-mode
   :init
@@ -243,9 +240,7 @@
   )
 
 
-;;; outline-magic:
-;;  --------------
-
+;;; outline-magic
 ;; outline-magic simplifies many of the commands in outline-mode, easy
 ;; cycling, navigation, promotion and demotion of headings in documents
 ;;;; TODO:
@@ -282,52 +277,49 @@
 )
 
 
-
-;;; flyspell:
-;;  ---------
-;; setup flyspell
-;;;; TODO
-;; - ispell-hunspell-dict-paths-alist contains right dictionaries, but
-;;   ispell-hunspell-dictionary-alist does not seem to load them
-;; - check https://facility9.com/2015/01/unsetting-key-bindings-in-emacs/
-(use-package flyspell
-  :diminish (flyspell-mode . "")
-  :hook
-  (text-mode . flyspell-mode)
-  (org-mode . flyspell-mode)
-  (TeX-mode . flyspell-mode)
-  (prog-mode . flyspell-prog-mode)
-  (emacs-lisp-mode . flyspell-prog-mode)
-  (python-mode . flyspell-prog-mode)
-  :bind
-  ("C-c w" . my/flyspell-check-next-highlighted-word)
-  ("C-c b" . flyspell-buffer)
-  :custom
-  ;; (setenv "LANG" "en_GB.UTF-8")
-  (progn (cond
-          ((executable-find "aspell")
-           ;; you may also need `ispell-extra-args'
-           (setq ispell-program-name "aspell"))
-          )
-          ((executable-find "hunspell")
-           (setq ispell-program-name "hunspell")
-           (setq ispell-really-hunspell t)
-           )
-         )
-  (ispell-dictionary "british-ize-w_accents")
-  :config
-  (defun my/flyspell-check-next-highlighted-word ()
-    "Custom function to spell check next highlighted word."
-    (interactive)
-    (flyspell-goto-next-error)
-    (ispell-word))
-  (unbind-key "C-." flyspell-mode-map)
-  )
+;; ;;; flyspell:
+;; ;; setup flyspell
+;; ;;;; TODO
+;; ;; - ispell-hunspell-dict-paths-alist contains right dictionaries, but
+;; ;;   ispell-hunspell-dictionary-alist does not seem to load them
+;; ;; - check https://facility9.com/2015/01/unsetting-key-bindings-in-emacs/
+;; (use-package flyspell
+;;   :diminish (flyspell-mode . "")
+;;   :hook
+;;   (text-mode . flyspell-mode)
+;;   (org-mode . flyspell-mode)
+;;   (TeX-mode . flyspell-mode)
+;;   (prog-mode . flyspell-prog-mode)
+;;   (emacs-lisp-mode . flyspell-prog-mode)
+;;   (python-mode . flyspell-prog-mode)
+;;   :bind
+;;   ("C-c w" . sdb/flyspell-check-next-highlighted-word)
+;;   ("C-c b" . flyspell-buffer)
+;;   :custom
+;;   ;; (setenv "LANG" "en_GB.UTF-8")
+;;   (progn (cond
+;;           ((executable-find "aspell")
+;;            ;; you may also need `ispell-extra-args'
+;;            (setq ispell-program-name "aspell"))
+;;           )
+;;           ((executable-find "hunspell")
+;;            (setq ispell-program-name "hunspell")
+;;            (setq ispell-really-hunspell t)
+;;            )
+;;          )
+;;   (ispell-dictionary "british-ize-w_accents")
+;;   :config
+;;   (defun sdb/flyspell-check-next-highlighted-word ()
+;;     "Custom function to spell check next highlighted word."
+;;     (interactive)
+;;     (flyspell-goto-next-error)
+;;     (ispell-word))
+;;   (unbind-key "C-." flyspell-mode-map)
+;;   )
 
 
-
-;;; auto-revert-mode:
-;;  -----------------
+;;; auto-revert-mode
+;; autorevert buffer upon file changes
 (use-package autorevert
   :ensure nil
   :delight auto-revert-mode
@@ -339,8 +331,7 @@
   )
 
 
-;;; dired:
-;;  ------
+;;; dired
 (use-package dired
   :ensure nil
   :bind (:map dired-mode-map
@@ -353,8 +344,9 @@
   )
 
 
-;;; magit:
-;;  ------
+;;; magit
+;;;; TODO:
+;; - get pinentry working
 (use-package magit
   :bind
   ("C-x g" . magit-status)
@@ -370,41 +362,32 @@
   (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256")))
   )
 
-;; (use-package forge
-;;   :after magit)
 
-;;; ediff:
-;;  ------
+;;; ediff
 (use-package ediff
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-split-window-function 'split-window-horizontally)
   :hook
-  (ediff-before-setup . my/store-pre-ediff-winconfig)
-  (ediff-quit . my/restore-pre-ediff-winconfig)
+  (ediff-before-setup . sdb/store-pre-ediff-winconfig)
+  (ediff-quit . sdb/restore-pre-ediff-winconfig)
   )
 
 ;; Restore window configuration after ediff:
 ;; Source: http://emacs.stackexchange.com/a/17089
-(defvar my/ediff-last-windows nil)
-(defun my/store-pre-ediff-winconfig ()
+(defvar sdb/ediff-last-windows nil)
+(defun sdb/store-pre-ediff-winconfig ()
   "Store window configuration before ediff call."
-  (setq my/ediff-last-windows (current-window-configuration)))
-(defun my/restore-pre-ediff-winconfig ()
+  (setq sdb/ediff-last-windows (current-window-configuration)))
+(defun sdb/restore-pre-ediff-winconfig ()
   "Restore saved window configuration after ediff ends."
-  (set-window-configuration my/ediff-last-windows))
+  (set-window-configuration sdb/ediff-last-windows))
 
 
-;;; tramp:
-;;  ------
-(defvar my/purmer-conda-path "/net/purmer/data1/debackere/miniconda3/bin/")
-(defvar my/purmer-ms-path "/home/debackere/.emacs.d/.cache/lsp/mspyls/")
+;;; tramp
 (use-package tramp
   :demand
   :config
-  ;; need to add conda path for remote pyls server
-  (add-to-list 'tramp-remote-path my/purmer-conda-path)
-  (add-to-list 'tramp-remote-path my/purmer-ms-path)
   :custom
   (tramp-default-method "ssh")
   (tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
@@ -414,27 +397,23 @@
   )
 
 
-;;; wgrep:
-;;  ------
+;;; wgrep
 (use-package wgrep-ag)
 
 ;;; projectile:
-;;  ----
 (use-package projectile
   :bind
   (:map projectile-mode-map
         ("s-p" . 'projectile-command-map)
-        ()
         )
   :init
   (projectile-mode t)
   :custom
   (projectile-completion-system 'ivy)
-
   )
 
-;;; ivy:
-;;  ----
+
+;;; ivy
 (use-package ivy
   :diminish (ivy-mode . "")
   :init
@@ -463,6 +442,7 @@
      ("r" ivy--rename-buffer-action "rename")))
   )
 
+;;; counsel
 (use-package counsel
   :bind
   (;; use swiper instead of isearch
@@ -487,36 +467,15 @@
   (ivy-rich-mode 1))
 
 
-;;; window movement:
-;;  ----------------
+;;; window movement
 
-;;;; winum
-;; Navigate windows by number.
-
-(use-package winum
-  :custom
-  (winum-keymap
-   (let ((map (make-sparse-keymap)))
-     (define-key map (kbd "M-0") 'winum-select-window-0-or-10)
-     (define-key map (kbd "M-1") 'winum-select-window-1)
-     (define-key map (kbd "M-2") 'winum-select-window-2)
-     (define-key map (kbd "M-3") 'winum-select-window-3)
-     (define-key map (kbd "M-4") 'winum-select-window-4)
-     (define-key map (kbd "M-5") 'winum-select-window-5)
-     (define-key map (kbd "M-6") 'winum-select-window-6)
-     (define-key map (kbd "M-7") 'winum-select-window-7)
-     (define-key map (kbd "M-8") 'winum-select-window-8)
-     (define-key map (kbd "M-9") 'winum-select-window-9)
-     map)
-   )
-  :custom-face
-  (winum-face ((t (:weight bold
-                   :foreground "red")))
-              )
-  :config
-  (winum-mode 1)
-  )
-
+;;;; windmove
+;; hjkl -> shifted to right
+;; h: left, j: down, k: up, l:right
+(global-set-key (kbd "s-j") 'windmove-left)
+(global-set-key (kbd "s-;") 'windmove-right)
+(global-set-key (kbd "s-l") 'windmove-up)
+(global-set-key (kbd "s-k") 'windmove-down)
 
 ;;;; buffer-move
 ;; Move buffers between windows.
@@ -532,17 +491,17 @@
 
 ;;;; window splitting
 
-(defun my/vsplit-other-window ()
+(defun sdb/vsplit-other-window ()
   "Split window vertically and switch to that window."
   (interactive)
   (split-window-vertically)
   (other-window 1 nil))
-(defun my/hsplit-other-window ()
+(defun sdb/hsplit-other-window ()
   "Split window horizontally and switch to that window."
   (interactive)
   (split-window-horizontally)
   (other-window 1 nil))
-(defun my/toggle-window-split ()
+(defun sdb/toggle-window-split ()
   "Toggle between horizontal and vertical orientation for 2 windows."
   (interactive)
   (if (= (count-windows) 2)
@@ -570,7 +529,7 @@
 
 
 ;;;; switch-to-minibuffer
-(defun my/switch-to-minibuffer-window ()
+(defun sdb/switch-to-minibuffer-window ()
   "Switch to minibuffer window (if active)."
   (interactive)
   (when (active-minibuffer-window)
@@ -578,22 +537,20 @@
 
 
 ;;;; custom shortcuts
-(bind-key "C-x 2" 'my/vsplit-other-window)
-(bind-key "C-x 3" 'my/hsplit-other-window)
+(bind-key "C-x 2" 'sdb/vsplit-other-window)
+(bind-key "C-x 3" 'sdb/hsplit-other-window)
 (bind-key "C-x |" 'toggle-window-split)
 (bind-key "<C-S-down>" 'shrink-window)
 (bind-key "<C-S-up>" 'enlarge-window)
 (bind-key "<C-S-left>" 'shrink-window-horizontally)
 (bind-key "<C-S-right>" 'enlarge-window-horizontally)
-(bind-key "<f10>" 'my/switch-to-minibuffer-window)
+(bind-key "<f10>" 'sdb/switch-to-minibuffer-window)
 ;; the fullscreen of frame.el makes me lose my menu bar
 (global-unset-key (kbd "<f11>"))
 
 
-;;; buffer navigation:
-;;  ------------------
-
-(defun my/push-mark-no-activate ()
+;;; buffer navigation
+(defun sdb/push-mark-no-activate ()
   "Push `point' to `mark-ring' and do not activate the region.
 Equivalent to \\[set-mark-command] when \\[transient-mark-mode] is
 disabled."
@@ -601,7 +558,7 @@ disabled."
   (push-mark (point) t nil)
   (message "Pushed mark to ring"))
 
-(defun my/jump-to-mark ()
+(defun sdb/jump-to-mark ()
   "Jump to the local mark, respecting the `mark-ring' order.
 
 This is the same as using \\[set-mark-command] with the prefix
@@ -610,7 +567,7 @@ argument."
   (set-mark-command 1))
 
 ;; copied from http://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-beginning-of-a-line/
-(defun my/smarter-move-beginning-of-line (arg)
+(defun sdb/smarter-move-beginning-of-line (arg)
   "Move point back to indentation of beginning of line.
 
 Move point to the first non-whitespace character on this line.
@@ -634,9 +591,9 @@ point reaches the beginning or end of the buffer, stop there."
       (move-beginning-of-line 1))))
 
 ;;;; shortcuts
-(bind-key "C-`" 'my/push-mark-no-activate)
-(bind-key "M-`" 'my/jump-to-mark)
-(bind-key "C-a" 'my/smarter-move-beginning-of-line)
+(bind-key "C-`" 'sdb/push-mark-no-activate)
+(bind-key "M-`" 'sdb/jump-to-mark)
+(bind-key "C-a" 'sdb/smarter-move-beginning-of-line)
 
 ;;;; avy
 (use-package avy
@@ -652,8 +609,7 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "C-M-S-e" 'end-of-defun)
 
 
-;;; Text manipulation:
-;;  ------------------
+;;; Text manipulation
 (defun copy-line-or-region ()
   "Copy current line, or current text selection."
   (interactive)
@@ -742,8 +698,7 @@ point reaches the beginning or end of the buffer, stop there."
   )
 
 
-;;; Themes:
-;;  -------
+;;; Themes
 (defalias 'switch-theme 'counsel-load-theme)
 
 ;; # You may need to run these two lines if you haven't set up Homebrew
@@ -758,7 +713,7 @@ point reaches the beginning or end of the buffer, stop there."
               ((string-equal system-type "gnu/linux") '(font . "Source Code Pro 12"))))
 
 
-;;;; Icons:
+;;;; Icons
 (use-package all-the-icons)
 (use-package all-the-icons-dired)
 (use-package all-the-icons-ivy-rich
@@ -766,13 +721,13 @@ point reaches the beginning or end of the buffer, stop there."
 
 
 
-;;;; powerline:
+;;;; powerline
 (use-package powerline
   :disabled
   :config
   (powerline-default-theme))
 
-;;;; Default theme:
+;;;; Default theme
 (use-package material-theme)
 (use-package dracula-theme)
 (use-package solarized-theme)
@@ -784,6 +739,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;; Languages:
 ;;  ----------
+
 ;;;; company-mode
 ;; Setup company-mode for autocompletion
 
@@ -817,28 +773,65 @@ point reaches the beginning or end of the buffer, stop there."
   (global-flycheck-mode)
   )
 
+;;;; python
+;; add functionality to automatically load the correct python venv on
+;; focus changes -> not required, lsp-pyright with
+;; lsp-pyright-multi-root nil loads local venv correctly
+
+;; (use-package pyvenv
+;;   :ensure t)
+
+;; (use-package pyvenv-auto
+;;   :ensure t)
+
+;; (defun switch-python-venv (&optional frame)
+;;   "Switch Python virtualenv for FRAME."
+;;   (when (eq major-mode 'python-mode)
+;;     (pyvenv-auto-run)
+;;   ))
+
+;; (add-to-list 'window-selection-change-functions 'switch-python-venv)
+
+(use-package python-black
+  :demand t
+  :after python
+  :hook (python-mode . python-black-on-save-mode-enable-dwim))
+
+(defcustom lsp-ruff-executable "ruff-lsp"
+  "Command to start the Ruff language server."
+  :group 'lsp-python
+  :risky t
+  :type 'file)
+
 ;;;; lsp
-(setq lsp-keymap-prefix "s-l")
 ;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
 (setq read-process-output-max (* 1024 1024))
 (setq gc-cons-threshold 64000000)
 
 (use-package lsp-mode
+  ;; do not show yas when lsp-mode enabled
   :diminish (yas-minor-mode . "")
   :hook
-  (python-mode . lsp)
   ;; enable yas-minor-mode on lsp-mode to fix completion error
   (lsp-mode . yas-minor-mode)
-  :commands lsp
+  :bind
+  ("s-l" . lsp-keymap-prefix)
+  :commands (lsp lsp-deferred)
   :config
-  ;; configuration of remote python language server
+  ;; ;; configuration of remote python language server
+  ;; (lsp-register-client
+  ;;  (make-lsp-client :new-connection
+  ;;                   ;; (lsp-tramp-connection "Microsoft.Python.Language Server")
+  ;;                   (lsp-tramp-connection "pyls")
+  ;;                   :major-modes '(python-mode)
+  ;;                   :remote? t
+  ;;                   :server-id 'pyls-remote))
   (lsp-register-client
-   (make-lsp-client :new-connection
-                    ;; (lsp-tramp-connection "Microsoft.Python.Language Server")
-                    (lsp-tramp-connection "pyls")
-                    :major-modes '(python-mode)
-                    :remote? t
-                    :server-id 'pyls-remote))
+   (make-lsp-client
+    :new-connection (lsp-stdio-connection (lambda () (list lsp-ruff-executable)))
+    :activation-fn (lsp-activate-on() "python")
+    :add-on? t
+    :server-id 'ruff-lsp))
   :custom
   (lsp-prefer-capf t)
   (lsp-idle-delay 0.5)
@@ -847,30 +840,29 @@ point reaches the beginning or end of the buffer, stop there."
   ;; (lsp-auto-guess-root t)
   )
 
-(use-package lsp-python-ms
-  :init
-  (setq lsp-python-ms-auto-install-server t)
-  (setq lsp-python-ms-python-executable "python3")
+;; to make this work, run npm install -g pyright
+(use-package lsp-pyright
+  :custom
+  ;; see https://github.com/emacs-lsp/lsp-pyright/issues/66#issuecomment-1144136538
+  ;; this will start a separate process for each project
+  (lsp-pyright-multi-root nil)
   :hook (python-mode . (lambda ()
-                          (require 'lsp-python-ms)
-                          (lsp))))
+                          (require 'lsp-pyright)
+                          (lsp-deferred)))
 
-;; ;; to make this work, run npm install -g pyright
-;; (use-package lsp-pyright
-;;   :hook (python-mode . (lambda ()
-;;                           (require 'lsp-pyright)
-;;                           (lsp))))
-
-(use-package lsp-ivy
-  :commands lsp-ivy-workspace-symbol
-  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
   )
 
 (defun lsp-ivy-workspace-symbol-or-imenu (arg)
+  "Use counsel-imenu on ARG only if no lsp-mode available."
   (interactive "P")
   (if lsp-mode
       (lsp-ivy-workspace-symbol arg)
     (counsel-imenu))
+  )
+
+(use-package lsp-ivy
+  :commands lsp-ivy-workspace-symbol
+  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
   )
 
 (bind-key "C-c C-j" 'counsel-imenu)
@@ -880,8 +872,8 @@ point reaches the beginning or end of the buffer, stop there."
   :bind
   ("s->" . lsp-ui-find-next-reference)
   ("s-<" . lsp-ui-find-prev-reference)
-  :config
-  (lsp-ui-peek-enable 1)
+  :custom
+  (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
   )
@@ -914,7 +906,7 @@ point reaches the beginning or end of the buffer, stop there."
   (add-hook 'LaTeX-mode-hook (lambda ()
 			       (TeX-fold-mode 1)))
   (add-hook 'LaTeX-mode-hook 'turn-on-reftex)
-  (add-hook 'TeX-after-compilation-finished-functions #'my/tex-close-TeX-buffer)
+  (add-hook 'TeX-after-compilation-finished-functions #'sdb/tex-close-TeX-buffer)
 
   ;; Close tex-output buffer if there are only warnings after compilation
   ;; see https://emacs.stackexchange.com/q/38258/
@@ -933,7 +925,7 @@ point reaches the beginning or end of the buffer, stop there."
   (font-latex-fontify-script nil)
   (font-latex-fontify-sectioning 'color))
 
-(defun my/tex-close-TeX-buffer (_output)
+(defun sdb/tex-close-TeX-buffer (_output)
   "Close compilation buffer if there are no errors.
 Hook this function into `TeX-after-compilation-finished-functions'."
   (let ((buf (TeX-active-buffer)))
@@ -948,11 +940,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
                    if (eq (window-buffer win) (current-buffer))
                    do (kill-buffer (window-buffer win))))))))
 
-;;;; python
-(when (executable-find "ipython")
-  (setq python-shell-interpreter "ipython")
-  (setq python-shell-interpreter-args "--simple-prompt -i")
-  )
 
 ;;;; Lua
 ;; Requires lua and luarocks installations, available through Homebrew
@@ -980,12 +967,13 @@ Hook this function into `TeX-after-compilation-finished-functions'."
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
    (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
+ '(company-show-quick-access t nil nil "Customized with use-package company")
  '(custom-safe-themes
    '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(yaml-mode ws-butler keychain-environment lsp-python-ms ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move winum magit exec-path-from-shell diminish use-package))
+   '(python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
@@ -1013,4 +1001,4 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(winum-face ((t (:weight bold :foreground "red"))) t))
+ )
