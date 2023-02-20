@@ -350,6 +350,7 @@
 (use-package magit
   :bind
   ("C-x g" . magit-status)
+  :after (pinentry)
   :config
   ;; start a pinentry session for automatic signing of commits
   ;; -> requires allow-emacs-pinentry & allow-loopback-pinentry in gpg-agent.conf
@@ -803,6 +804,7 @@ point reaches the beginning or end of the buffer, stop there."
   :risky t
   :type 'file)
 
+
 ;;;; lsp
 ;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
 (setq read-process-output-max (* 1024 1024))
@@ -811,6 +813,7 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package lsp-mode
   ;; do not show yas when lsp-mode enabled
   :diminish (yas-minor-mode . "")
+  :after (yasnippet)
   :hook
   ;; enable yas-minor-mode on lsp-mode to fix completion error
   (lsp-mode . yas-minor-mode)
@@ -898,7 +901,7 @@ point reaches the beginning or end of the buffer, stop there."
   :config
   ;; latexmk document compilation
   ;; see http://tex.stackexchange.com/q/10561
-  (add-to-list 'TeX-command-list '("LaTeX Make" "latexmk -pdf -f %t" TeX-run-TeX))
+  (add-to-list 'TeX-command-list '("LaTeX Make" "latexmk -lualatex -f %t" TeX-run-TeX))
   (add-to-list 'TeX-command-list '("View" "open %s.pdf" TeX-run-command))
   (add-hook 'TeX-mode-hook (lambda () (setq TeX-command-default "LaTeX Make")))
 
@@ -940,7 +943,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
                    if (eq (window-buffer win) (current-buffer))
                    do (kill-buffer (window-buffer win))))))))
 
-
 ;;;; Lua
 ;; Requires lua and luarocks installations, available through Homebrew
 
@@ -974,6 +976,35 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
    '(python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
+ '(smartparens-global-mode t)
+ '(vc-annotate-background nil)
+ '(vc-annotate-color-map
+   '((20 . "#B71C1C")
+     (40 . "#FF5722")
+     (60 . "#FFA000")
+     (80 . "#558b2f")
+     (100 . "#00796b")
+     (120 . "#2196f3")
+     (140 . "#4527A0")
+     (160 . "#B71C1C")
+     (180 . "#FF5722")
+     (200 . "#FFA000")
+     (220 . "#558b2f")
+     (240 . "#00796b")
+     (260 . "#2196f3")
+     (280 . "#4527A0")
+     (300 . "#B71C1C")
+     (320 . "#FF5722")
+     (340 . "#FFA000")
+     (360 . "#558b2f")))
+ '(vc-annotate-very-old-color nil))
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ )
+
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
