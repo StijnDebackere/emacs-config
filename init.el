@@ -819,16 +819,16 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-mode . yas-minor-mode)
   :bind
   ("s-l" . lsp-keymap-prefix)
+  ("M-<tab>" . lsp-execute-code-action)
   :commands (lsp lsp-deferred)
   :config
-  ;; ;; configuration of remote python language server
-  ;; (lsp-register-client
-  ;;  (make-lsp-client :new-connection
-  ;;                   ;; (lsp-tramp-connection "Microsoft.Python.Language Server")
-  ;;                   (lsp-tramp-connection "pyls")
-  ;;                   :major-modes '(python-mode)
-  ;;                   :remote? t
-  ;;                   :server-id 'pyls-remote))
+  ;; configuration of remote python language server
+  (lsp-register-client
+   (make-lsp-client :new-connection
+                    (lsp-tramp-connection "pyright")
+                    :major-modes '(python-mode)
+                    :remote? t
+                    :server-id 'pyls-remote))
   (lsp-register-client
    (make-lsp-client
     :new-connection (lsp-stdio-connection (lambda () (list lsp-ruff-executable)))
@@ -840,6 +840,7 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-idle-delay 0.5)
   (lsp-enable-snippet nil)
   (lsp-modeline-code-actions-mode 1)
+  (lsp-auto-execute-action nil)
   ;; (lsp-auto-guess-root t)
   )
 
@@ -854,6 +855,15 @@ point reaches the beginning or end of the buffer, stop there."
                           (lsp-deferred)))
 
   )
+
+;; to use LanguageTool for spelling and grammar checking
+(use-package lsp-ltex
+  :ensure t
+  :hook (text-mode . (lambda ()
+                       (require 'lsp-ltex)
+                       (lsp-deferred)))  ; or lsp-deferred
+  :init
+  (setq lsp-ltex-version "15.2.0"))  ; make sure you have set this, see below
 
 (defun lsp-ivy-workspace-symbol-or-imenu (arg)
   "Use counsel-imenu on ARG only if no lsp-mode available."
@@ -875,6 +885,7 @@ point reaches the beginning or end of the buffer, stop there."
   :bind
   ("s->" . lsp-ui-find-next-reference)
   ("s-<" . lsp-ui-find-prev-reference)
+  ("C-c C-d" . lsp-ui-doc-glance)
   :custom
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
@@ -973,6 +984,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(custom-safe-themes
    '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
+ '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
    '(python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
@@ -1003,33 +1015,5 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
-
  '(smartparens-global-mode t)
- '(vc-annotate-background nil)
- '(vc-annotate-color-map
-   '((20 . "#B71C1C")
-     (40 . "#FF5722")
-     (60 . "#FFA000")
-     (80 . "#558b2f")
-     (100 . "#00796b")
-     (120 . "#2196f3")
-     (140 . "#4527A0")
-     (160 . "#B71C1C")
-     (180 . "#FF5722")
-     (200 . "#FFA000")
-     (220 . "#558b2f")
-     (240 . "#00796b")
-     (260 . "#2196f3")
-     (280 . "#4527A0")
-     (300 . "#B71C1C")
-     (320 . "#FF5722")
-     (340 . "#FFA000")
-     (360 . "#558b2f")))
- '(vc-annotate-very-old-color nil))
-(custom-set-faces
- ;; custom-set-faces was added by Custom.
- ;; If you edit it by hand, you could mess it up, so be careful.
- ;; Your init file should contain only one such instance.
- ;; If there is more than one, they won't work right.
- )
+ '(vc-annotate-color-map '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000") (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f"))))
