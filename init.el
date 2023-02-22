@@ -329,6 +329,8 @@
   :ensure nil
   :bind (:map dired-mode-map
               ("RET" . dired-find-alternate-file)
+              ("<backspace>" . dired-up-directory)
+              ("b" . dired-up-directory)
               ("^" . (lambda () (interactive) (find-alternate-file ".."))))
   :custom
   (dired-recursive-copies 'always)
@@ -452,6 +454,65 @@
 
 
 ;;; window movement
+
+;;;; ace-window
+(use-package ace-window
+  :ensure t
+  :defer 1
+  :bind
+  ("M-o" . ace-window)
+  :config
+  ;; see https://github.com/abo-abo/ace-window/issues/44#issuecomment-264923922
+  (set-face-attribute 'aw-leading-char-face nil
+                      :foreground "deep sky blue"
+                      :background nil
+                      :weight 'bold
+                      :height 10.0)
+  (set-face-attribute 'aw-mode-line-face nil
+                      :inherit 'mode-line-buffer-id
+                      :foreground "indian red")
+  (setq aw-keys   '(?a ?s ?d ?f ?j ?k ?l)
+        aw-dispatch-always t
+        aw-dispatch-alist
+        '((?x aw-delete-window     "Ace - Delete Window")
+          (?c aw-swap-window       "Ace - Swap Window")
+          (?n aw-flip-window)
+          (?h aw-split-window-vert "Ace - Split Vert Window")
+          (?v aw-split-window-horz "Ace - Split Horz Window")
+          (?m delete-other-windows "Ace - Maximize Window")
+          (?g delete-other-windows)
+          (?b balance-windows)
+          (?u winner-undo)
+          (?r winner-redo)))
+
+  ;; (when (package-installed-p 'hydra)
+  ;;   (defhydra hydra-window (:color blue :hint nil :idle 0.4 :timeout 3)
+  ;;     "
+  ;;                                                                             ╭────────────┐
+  ;;                                                                             │ Ace Window │
+  ;;           ╭─────────────────────────────────────────────────────────────────┴────────────╯
+  ;;               [^w^] windows size [^r^] winner redo  [^u^] winner undo  [^o^] scroll other
+  ;;               [^a^] jump window  [^s^] jump window  [^d^] jump window  [^f^] jump window
+  ;;               [^g^] max. current [^h^] split horz.  [^j^] jump window  [^k^] jump window
+  ;;               [^l^] jump window  [^;^] swap window  [^x^] del. window  [^c^] swap window
+  ;;               [^v^] split vert.  [^b^] balance win. [^n^] last window  [^m^] max window
+  ;;           --------------------------------------------------------------------------------
+  ;;              ")
+  ;;   (defhydra hydra-window-size (:color red)
+  ;;     "Windows size"
+  ;;     ("j" shrink-window-horizontally "shrink horizontal")
+  ;;     ("k" shrink-window "shrink vertical")
+  ;;     ("l" enlarge-window "enlarge vertical")
+  ;;     (";" enlarge-window-horizontally "enlarge horizontal"))
+  ;;   (defhydra hydra-window-frame (:color red)
+  ;;     "Frame"
+  ;;     ("f" make-frame "new frame")
+  ;;     ("x" delete-frame "delete frame"))
+  ;;   (add-to-list 'aw-dispatch-alist '(?w hydra-window-size/body) t)
+  ;;   (add-to-list 'aw-dispatch-alist '(?o hydra-window-scroll/body) t)
+  ;;   (add-to-list 'aw-dispatch-alist '(?\; hydra-window-frame/body) t))
+  (ace-window-display-mode t))
+
 
 ;;;; windmove
 ;; hjkl -> shifted to right
@@ -839,14 +900,8 @@ point reaches the beginning or end of the buffer, stop there."
   :hook (text-mode . (lambda ()
                        (require 'lsp-ltex)
                        (lsp-deferred)))  ; or lsp-deferred
-  ;; :bind
-  ;; (:map lsp-ltex-mode-map
-  ;;       ("c" . lsp-ltex-keymap-prefix))
-  ;; ("s-d c" . lsp-ltex-change-language)
-  ;; :config
-  ;; (defvar lsp-ltex-mode-map (make-sparse-keymap))
-  ;; (define-prefix-command 'lsp-ltex-mode-map)
-  ;; (define-key global-map (kbd "s-d") 'lsp-ltex-mode-map)
+  :bind
+  ("C-c l" . lsp-ltex-change-language)
   :init
   (setq lsp-ltex-version "15.2.0")  ; make sure you have set this, see below
   (setq lsp-ltex-check-frequency "save")
@@ -980,7 +1035,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
+   '(vterm hydra ace-window python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
