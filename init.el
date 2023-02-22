@@ -54,8 +54,7 @@
 (use-package server
   :config
   (progn
-    (if (not (server-running-p)) (server-start)))
-)
+    (if (not (server-running-p)) (server-start))))
 
 ;;;; Mac customization
 (when (string-equal system-type "darwin")
@@ -75,9 +74,7 @@
 
   ;; Not going to use these commands
   (put 'ns-print-buffer 'disabled t)
-  (put 'suspend-frame 'disabled t)
-
-  )
+  (put 'suspend-frame 'disabled t))
 
 (defun open-dir-in-finder ()
   "Open a new Finder window to the path of the current buffer."
@@ -100,8 +97,7 @@
 ;;;;; path loading
 (use-package exec-path-from-shell
   :init
-  (exec-path-from-shell-initialize)
-  )
+  (exec-path-from-shell-initialize))
 
 ;;;; Sane defaults
 ;; Amalgamation of
@@ -208,14 +204,12 @@
                                         ; auto-save (default: 30)
       auto-save-interval 300            ; number of keystrokes between auto-saves
                                         ; (default: 300)
-      fill-column 100
-      )
+      fill-column 100)
 
 ;;; automatic whitespace removal
 (use-package ws-butler
   :diminish ws-butler-mode
-  :hook (prog-mode . ws-butler-mode)
-  )
+  :hook (prog-mode . ws-butler-mode))
 
 
 ;;; save emacs buffer upon loss of focus
@@ -236,8 +230,7 @@
   ;; prefer this command as backward-kill-word
   (unbind-key "M-<backspace>" smartparens-mode-map)
   :custom
-  (sp-show-pair-from-inside nil)
-  )
+  (sp-show-pair-from-inside nil))
 
 
 ;;; outline-magic
@@ -268,13 +261,14 @@
                                    "\\subsection"
                                    "\\subsubsection"
                                    "\\paragraph"
-                                   "\\subparagraph")
-                                 )
-                           )
-                       )
-           )
-    )
-)
+                                   "\\subparagraph")))))))
+
+
+;;;; Text
+(defun sdb/enable-dead-keys ()
+  "Enable dead key expansion with TeX input method in text mode."
+  (activate-input-method "TeX"))
+(add-hook 'text-mode-hook 'sdb/enable-dead-keys)
 
 
 ;; ;;; flyspell:
@@ -327,8 +321,7 @@
   (global-auto-revert-mode)
   :custom
   (global-auto-revert-non-file-buffers t)
-  (auto-revert-verbose nil)
-  )
+  (auto-revert-verbose nil))
 
 
 ;;; dired
@@ -336,12 +329,10 @@
   :ensure nil
   :bind (:map dired-mode-map
               ("RET" . dired-find-alternate-file)
-              ("^" . (lambda () (interactive) (find-alternate-file "..")))
-              )
+              ("^" . (lambda () (interactive) (find-alternate-file ".."))))
   :custom
   (dired-recursive-copies 'always)
-  (dired-recursive-deletes 'top)
-  )
+  (dired-recursive-deletes 'top))
 
 
 ;;; magit
@@ -360,8 +351,7 @@
   (setq-default magit-git-environment
                 (cons "PINENTRY_USER_DATA=USER_CURSES=0" magit-git-environment))
   :custom
-  (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256")))
-  )
+  (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256"))))
 
 
 ;;; ediff
@@ -371,8 +361,7 @@
   (ediff-split-window-function 'split-window-horizontally)
   :hook
   (ediff-before-setup . sdb/store-pre-ediff-winconfig)
-  (ediff-quit . sdb/restore-pre-ediff-winconfig)
-  )
+  (ediff-quit . sdb/restore-pre-ediff-winconfig))
 
 ;; Restore window configuration after ediff:
 ;; Source: http://emacs.stackexchange.com/a/17089
@@ -394,8 +383,7 @@
   (tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
   (tramp-set-completion-function "ssh"
                                  '((tramp-parse-sconfig "/etc/ssh_config")
-                                   (tramp-parse-sconfig "~/.ssh/config")))
-  )
+                                   (tramp-parse-sconfig "~/.ssh/config"))))
 
 
 ;;; wgrep
@@ -405,13 +393,11 @@
 (use-package projectile
   :bind
   (:map projectile-mode-map
-        ("s-p" . 'projectile-command-map)
-        )
+        ("s-p" . 'projectile-command-map))
   :init
   (projectile-mode t)
   :custom
-  (projectile-completion-system 'ivy)
-  )
+  (projectile-completion-system 'ivy))
 
 
 ;;; ivy
@@ -440,8 +426,7 @@
    'ivy-switch-buffer
    '(("j" switch-to-buffer-other-frame "other frame")
      ("k" kill-buffer "kill")
-     ("r" ivy--rename-buffer-action "rename")))
-  )
+     ("r" ivy--rename-buffer-action "rename"))))
 
 ;;; counsel
 (use-package counsel
@@ -456,12 +441,10 @@
    ;; not the same as helm-show-kill-ring
    ("M-y" . counsel-yank-pop)
    ;; If called with prefix argument, directory and args can be provided
-   ("C-c s" . counsel-ag)
-   )
+   ("C-c s" . counsel-ag))
   :custom
   ;; separate history items with line of dashes
-  (counsel-yank-pop-separator (concat "\n" (make-string 70 ?-) "\n"))
-  )
+  (counsel-yank-pop-separator (concat "\n" (make-string 70 ?-) "\n")))
 
 (use-package ivy-rich
   :config
@@ -486,8 +469,7 @@
   (("<C-M-S-up>" . 'buf-move-up)
    ("<C-M-S-down>" . 'buf-move-down)
    ("<C-M-S-left>" . 'buf-move-left)
-   ("<C-M-S-right>" . 'buf-move-right))
-  )
+   ("<C-M-S-right>" . 'buf-move-right)))
 
 
 ;;;; window splitting
@@ -616,14 +598,14 @@ point reaches the beginning or end of the buffer, stop there."
   (interactive)
   (if (region-active-p)
       (kill-ring-save (region-beginning) (region-end))
-    (kill-ring-save (line-beginning-position) (line-beginning-position 2)) ) )
+    (kill-ring-save (line-beginning-position) (line-beginning-position 2))))
 
 (defun cut-line-or-region ()
   "Cut the current line, or current text selection."
   (interactive)
   (if (region-active-p)
       (kill-region (region-beginning) (region-end))
-    (kill-region (line-beginning-position) (line-beginning-position 2)) ) )
+    (kill-region (line-beginning-position) (line-beginning-position 2))))
 
 ;; https://www.emacswiki.org/emacs/UnfillParagraph
 (defun unfill-paragraph (&optional region)
@@ -645,8 +627,7 @@ point reaches the beginning or end of the buffer, stop there."
         ;; ;; including this prevents some crazy jumping inside brackets
         ;; ;; which is annoying in elisp
         ;; (goto-char end)
-        (next-logical-line)
-        ))
+        (next-logical-line)))
 
 (defun toggle-camelcase-underscores ()
   "Toggle between camelcase and underscore notation for the symbol at point."
@@ -684,8 +665,7 @@ point reaches the beginning or end of the buffer, stop there."
   ("C-S-c C-S-c" . mc/edit-lines)
   ("C-c #" . mc/insert-numbers)
   :custom
-  (mc/insert-numbers-default 1)
-  )
+  (mc/insert-numbers-default 1))
 
 ;;;; visual-regexp
 ;; https://github.com/benma/visual-regexp-steroids.el/issues/21
@@ -695,8 +675,7 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package visual-regexp-steroids
   :bind
   ("C-c r" . vr/replace)
-  ("C-c q" . vr/query-replace)
-  )
+  ("C-c q" . vr/query-replace))
 
 
 ;;; Themes
@@ -734,8 +713,7 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package solarized-theme)
 (use-package gotham-theme
   :config
-  (load-theme 'material t)
-  )
+  (load-theme 'material t))
 
 
 ;;; Languages:
@@ -755,13 +733,11 @@ point reaches the beginning or end of the buffer, stop there."
               ;; unbind return from completion
               ("<tab>")
               ("RET")
-              ("<return>")
-         )
+              ("<return>"))
   :custom
   (company-minimum-prefix-length 2)
   (company-idle-delay 0.05)
-  (company-show-numbers t)
-  )
+  (company-show-numbers t))
 
 (use-package company-box
   :diminish (company-box-mode . "")
@@ -771,8 +747,7 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package flycheck
   :diminish (flycheck-mode . "")
   :init
-  (global-flycheck-mode)
-  )
+  (global-flycheck-mode))
 
 ;;;; python
 ;; add functionality to automatically load the correct python venv on
@@ -792,6 +767,10 @@ point reaches the beginning or end of the buffer, stop there."
 ;;   ))
 
 ;; (add-to-list 'window-selection-change-functions 'switch-python-venv)
+
+(use-package python
+  :config
+  (unbind-key "C-c C-d" python-mode-map))
 
 (use-package python-black
   :demand t
@@ -837,7 +816,7 @@ point reaches the beginning or end of the buffer, stop there."
     :server-id 'ruff-lsp))
   :custom
   (lsp-prefer-capf t)
-  (lsp-idle-delay 0.5)
+  (lsp-idle-delay 0.0)
   (lsp-enable-snippet nil)
   (lsp-modeline-code-actions-mode 1)
   (lsp-auto-execute-action nil)
@@ -852,9 +831,7 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-pyright-multi-root nil)
   :hook (python-mode . (lambda ()
                           (require 'lsp-pyright)
-                          (lsp-deferred)))
-
-  )
+                          (lsp-deferred))))
 
 ;; to use LanguageTool for spelling and grammar checking
 (use-package lsp-ltex
@@ -862,21 +839,40 @@ point reaches the beginning or end of the buffer, stop there."
   :hook (text-mode . (lambda ()
                        (require 'lsp-ltex)
                        (lsp-deferred)))  ; or lsp-deferred
+  ;; :bind
+  ;; (:map lsp-ltex-mode-map
+  ;;       ("c" . lsp-ltex-keymap-prefix))
+  ;; ("s-d c" . lsp-ltex-change-language)
+  ;; :config
+  ;; (defvar lsp-ltex-mode-map (make-sparse-keymap))
+  ;; (define-prefix-command 'lsp-ltex-mode-map)
+  ;; (define-key global-map (kbd "s-d") 'lsp-ltex-mode-map)
   :init
-  (setq lsp-ltex-version "15.2.0"))  ; make sure you have set this, see below
+  (setq lsp-ltex-version "15.2.0")  ; make sure you have set this, see below
+  (setq lsp-ltex-check-frequency "save")
+  (defun lsp-ltex-change-language ()
+    "Change the LanguageTool language."
+    (interactive)
+    (let* ((completions '(("English" . "en-US")
+                          ("Spanish" . "es")
+                          ;; ("Automatic" . "auto")
+                          ("Dutch" . "nl-BE")))
+           (ltex-lang (cdr (assoc (ivy-completing-read "Select language for LanguageTool: " completions)
+                                  completions))))
+      (setq lsp-ltex-language ltex-lang)
+      (message "Changed LanguageTool language to %s" ltex-lang)
+      (lsp-restart-workspace))))
 
 (defun lsp-ivy-workspace-symbol-or-imenu (arg)
   "Use counsel-imenu on ARG only if no lsp-mode available."
   (interactive "P")
   (if lsp-mode
       (lsp-ivy-workspace-symbol arg)
-    (counsel-imenu))
-  )
+    (counsel-imenu)))
 
 (use-package lsp-ivy
   :commands lsp-ivy-workspace-symbol
-  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu)
-  )
+  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu))
 
 (bind-key "C-c C-j" 'counsel-imenu)
 
@@ -889,8 +885,7 @@ point reaches the beginning or end of the buffer, stop there."
   :custom
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
-  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references)
-  )
+  (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references))
 
 ;; ;; optionally if you want to use debugger
 ;; (use-package dap-mode)
@@ -902,9 +897,7 @@ point reaches the beginning or end of the buffer, stop there."
   :defer t
   :diminish reftex-mode
   :custom
-  (reftex-plug-into-auctex t)
-  )
-
+  (reftex-plug-into-auctex t))
 (use-package tex
   ;; to get working: https://github.com/jwiegley/use-package/issues/379
   :ensure auctex
@@ -928,7 +921,6 @@ point reaches the beginning or end of the buffer, stop there."
     "Close TeX buffer if there are only warnings."
     :group 'TeX-output
     :type 'boolean)
-
 
   :custom
   ;; parse tex files on load and save
@@ -964,8 +956,9 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 
 ;;;; elisp
 (use-package eldoc
-  :diminish (eldoc-mode . "")
-  )
+  :diminish (eldoc-mode . ""))
+
+(load "~/.emacs.d/sdb-init.el")
 
 
 ;;; Custom:
