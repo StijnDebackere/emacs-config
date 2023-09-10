@@ -388,6 +388,9 @@
                                    (tramp-parse-sconfig "~/.ssh/config"))))
 
 
+;;; ripgrep
+(use-package rg)
+
 ;;; wgrep
 (use-package wgrep-ag)
 
@@ -754,23 +757,22 @@ point reaches the beginning or end of the buffer, stop there."
   ;;
   ;;  M-x customize-group RET combobulate RET
   ;;
-  (use-package combobulate
-    ;; Optional, but recommended.
-    ;;
-    ;; You can manually enable Combobulate with `M-x
-    ;; combobulate-mode'.
-    :bind
-    ("C-c o o" . combobulate)
-    :hook ((python-ts-mode . combobulate-mode)
-           (js-ts-mode . combobulate-mode)
-           (css-ts-mode . combobulate-mode)
-           (yaml-ts-mode . combobulate-mode)
-           (typescript-ts-mode . combobulate-mode)
-           (tsx-ts-mode . combobulate-mode))
-    ;; Amend this to the directory where you keep Combobulate's source
-    ;; code.
-    :load-path ("~/Repositories/combobulate/")))
-
+  ;; (use-package combobulate
+  ;;   ;; Optional, but recommended.
+  ;;   ;;
+  ;;   ;; You can manually enable Combobulate with `M-x
+  ;;   ;; combobulate-mode'.
+  ;;   :bind
+  ;;   ("C-c o o" . combobulate)
+  ;;   :hook ((python-ts-mode . combobulate-mode)
+  ;;          (js-ts-mode . combobulate-mode)
+  ;;          (css-ts-mode . combobulate-mode)
+  ;;          (yaml-ts-mode . combobulate-mode)
+  ;;          (typescript-ts-mode . combobulate-mode)
+  ;;          (tsx-ts-mode . combobulate-mode))
+  ;;   ;; Amend this to the directory where you keep Combobulate's source
+  ;;   ;; code.  ;;   :load-path ("~/Repositories/combobulate/")))
+)
 
 ;;;; multiple-cursors
 (use-package multiple-cursors
@@ -867,6 +869,10 @@ point reaches the beginning or end of the buffer, stop there."
   :init
   (global-flycheck-mode))
 
+;; ;;;; SQL
+;; (use-package flymake-sqlfluff
+;;   :hook (sql-mode . #'flymake-sqlfluff-load))
+
 ;;;; python
 ;; add functionality to automatically load the correct python venv on
 ;; focus changes -> not required, lsp-pyright with
@@ -945,35 +951,35 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package lsp-pyright
   :custom
   ;; see https://github.com/emacs-lsp/lsp-pyright/issues/66#issuecomment-1144136538
-  ;; this will start a separate process for each project
-  (lsp-pyright-multi-root nil)
-  :hook (python-mode . (lambda ()
+  ;; this will start a separate process for each lsp
+  (project-pyright-multi-root nil)
+  :hook (python-ts-mode . (lambda ()
                           (require 'lsp-pyright)
                           (lsp-deferred))))
 
 ;; to use LanguageTool for spelling and grammar checking
-(use-package lsp-ltex
-  :ensure t
-  :hook (text-mode . (lambda ()
-                       (require 'lsp-ltex)
-                       (lsp-deferred)))  ; or lsp-deferred
-  :bind
-  ("C-c l" . lsp-ltex-change-language)
-  :init
-  (setq lsp-ltex-version "15.2.0")  ; make sure you have set this, see below
-  (setq lsp-ltex-check-frequency "save")
-  (defun lsp-ltex-change-language ()
-    "Change the LanguageTool language."
-    (interactive)
-    (let* ((completions '(("English" . "en-US")
-                          ("Spanish" . "es")
-                          ;; ("Automatic" . "auto")
-                          ("Dutch" . "nl-BE")))
-           (ltex-lang (cdr (assoc (ivy-completing-read "Select language for LanguageTool: " completions)
-                                  completions))))
-      (setq lsp-ltex-language ltex-lang)
-      (message "Changed LanguageTool language to %s" ltex-lang)
-      (lsp-restart-workspace))))
+;; (use-package lsp-ltex
+;;   :ensure t
+;;   :hook (text-mode . (lambda ()
+;;                        (require 'lsp-ltex)
+;;                        (lsp-deferred)))  ; or lsp-deferred
+;;   :bind
+;;   ("C-c l" . lsp-ltex-change-language)
+;;   :init
+;;   (setq lsp-ltex-version "15.2.0")  ; make sure you have set this, see below
+;;   (setq lsp-ltex-check-frequency "save")
+;;   (defun lsp-ltex-change-language ()
+;;     "Change the LanguageTool language."
+;;     (interactive)
+;;     (let* ((completions '(("English" . "en-US")
+;;                           ("Spanish" . "es")
+;;                           ;; ("Automatic" . "auto")
+;;                           ("Dutch" . "nl-BE")))
+;;            (ltex-lang (cdr (assoc (ivy-completing-read "Select language for LanguageTool: " completions)
+;;                                   completions))))
+;;       (setq lsp-ltex-language ltex-lang)
+;;       (message "Changed LanguageTool language to %s" ltex-lang)
+;;       (lsp-restart-workspace))))
 
 (defun lsp-ivy-workspace-symbol-or-imenu (arg)
   "Use counsel-imenu on ARG only if no lsp-mode available."
@@ -1070,7 +1076,17 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 (use-package eldoc
   :diminish (eldoc-mode . ""))
 
-(load "~/.emacs.d/sdb-init.el")
+;; ;;;; SQL
+;; (use-package sql
+;;   :hook (sql-mode . lsp-mode)
+;;   :custom
+;;   (setq lsp-sqls-workspace-config-path nil)
+;;   (setq lsp-sqls-connections
+;;         '(((driver . "postgresql") (dataSourceName . "host=live-main.c56d9jndqmv2.us-east-2.redshift.amazonaws.com port=5439 user=tf_stijn_debackere_an password=local dbname=klarprod sslmode=disable"))
+;;           ))
+;;   )
+
+;; (load "~/.emacs.d/sdb-init.el")
 
 
 ;;; Custom:
@@ -1084,36 +1100,34 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(ansi-color-faces-vector
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
-   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
+   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb"
+           "#81d4fa" "#263238"))
  '(company-show-quick-access t nil nil "Customized with use-package company")
  '(custom-safe-themes
-   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
+   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477"
+     default))
  '(fci-rule-color "#ECEFF1")
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(treesit vterm hydra ace-window python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell diminish use-package))
+   '(rg all-the-icons-ivy treesit vterm hydra ace-window
+        python-black yaml-mode ws-butler keychain-environment ag
+        gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode
+        company solarized-theme tramp pinentry wgrep-ag
+        visual-regexp-steroids super-save lua-mode
+        all-the-icons-ivy-rich-mode all-the-icons-dired
+        all-the-icons-ivy-rich powerline all-the-icons avy-zap
+        smartparens latex auctex tex material-theme multiple-cursors
+        buffer-move magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
-   '((20 . "#B71C1C")
-     (40 . "#FF5722")
-     (60 . "#FFA000")
-     (80 . "#558b2f")
-     (100 . "#00796b")
-     (120 . "#2196f3")
-     (140 . "#4527A0")
-     (160 . "#B71C1C")
-     (180 . "#FF5722")
-     (200 . "#FFA000")
-     (220 . "#558b2f")
-     (240 . "#00796b")
-     (260 . "#2196f3")
-     (280 . "#4527A0")
-     (300 . "#B71C1C")
-     (320 . "#FF5722")
-     (340 . "#FFA000")
-     (360 . "#558b2f")))
+   '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f")
+     (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0")
+     (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000")
+     (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3")
+     (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722")
+     (340 . "#FFA000") (360 . "#558b2f")))
  '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
