@@ -177,6 +177,9 @@
 ;; Do not ask to kill processes
 (setq confirm-kill-processes nil)
 
+;; Ask to kill emacs
+(setq confirm-kill-emacs 'y-or-n-p)
+
 ;;;; Backups
 ;; make back-ups to the ~/.emacs.d/backups directory
 ;; https://stackoverflow.com/q/151945/
@@ -265,11 +268,11 @@
 
 
 ;;;; Text
-(defun sdb/enable-dead-keys ()
-  "Enable dead key expansion with TeX input method in text mode."
-  (activate-input-method "TeX"))
-(add-hook 'text-mode-hook 'sdb/enable-dead-keys)
-
+;; ;; Disabled because it annoys me in COMMIT_MSG and yml files...
+;; (defun sdb/enable-dead-keys ()
+;;   "Enable dead key expansion with TeX input method in text mode."
+;;   (activate-input-method "TeX"))
+;; (add-hook 'text-mode-hook 'sdb/enable-dead-keys)
 
 ;; ;;; flyspell:
 ;; ;; setup flyspell
@@ -475,7 +478,7 @@
                       :inherit 'mode-line-buffer-id
                       :foreground "indian red")
   (setq aw-keys   '(?a ?s ?d ?f ?j ?k ?l)
-        aw-dispatch-always t
+        aw-dispatch-always nil
         aw-dispatch-alist
         '((?x aw-delete-window     "Ace - Delete Window")
           (?c aw-swap-window       "Ace - Swap Window")
@@ -1100,34 +1103,27 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(ansi-color-faces-vector
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
-   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb"
-           "#81d4fa" "#263238"))
+   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
  '(company-show-quick-access t nil nil "Customized with use-package company")
  '(custom-safe-themes
-   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477"
-     default))
+   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
  '(package-selected-packages
-   '(rg all-the-icons-ivy treesit vterm hydra ace-window
-        python-black yaml-mode ws-butler keychain-environment ag
-        gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode
-        company solarized-theme tramp pinentry wgrep-ag
-        visual-regexp-steroids super-save lua-mode
-        all-the-icons-ivy-rich-mode all-the-icons-dired
-        all-the-icons-ivy-rich powerline all-the-icons avy-zap
-        smartparens latex auctex tex material-theme multiple-cursors
+   '(rg flymake-sqlfluff all-the-icons-ivy treesit vterm hydra ace-window python-black yaml-mode
+        ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode
+        company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode
+        all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline
+        all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors
         buffer-move magit exec-path-from-shell diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
-   '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f")
-     (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0")
-     (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000")
-     (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3")
-     (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722")
-     (340 . "#FFA000") (360 . "#558b2f")))
+   '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b")
+     (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000")
+     (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C")
+     (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f")))
  '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
