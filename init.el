@@ -370,7 +370,10 @@
   (setq-default magit-git-environment
                 (cons "PINENTRY_USER_DATA=USER_CURSES=0" magit-git-environment))
   :custom
-  (magit-log-arguments (quote ("--graph" "--color" "--decorate" "-n256"))))
+  (magit-log-arguments (quote ("--decorate" "-n256")))
+  (magit-refresh-status-buffer nil)
+  (remove-hook 'server-switch-hook 'magit-commit-diff)
+  (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
 
 
 ;;; ediff
@@ -789,7 +792,7 @@ point reaches the beginning or end of the buffer, stop there."
   ;;          (tsx-ts-mode . combobulate-mode))
   ;;   ;; Amend this to the directory where you keep Combobulate's source
   ;;   ;; code.  ;;   :load-path ("~/Repositories/combobulate/")))
-)
+  )
 
 ;;;; multiple-cursors
 (use-package multiple-cursors
