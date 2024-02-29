@@ -905,6 +905,17 @@ point reaches the beginning or end of the buffer, stop there."
   :diminish (company-box-mode . "")
   :hook (company-mode . company-box-mode))
 
+;;;; GitHub CoPilot
+(use-package copilot
+  :straight (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
+  :ensure t
+  :hook (prog-mode . copilot-mode)
+  :diminish (copilot-mode . "")
+  :bind (:map copilot-completion-map
+              ("TAB" . copilot-accept-completion)
+              )
+  )
+
 ;;;; Flycheck
 (use-package flycheck
   :diminish (flycheck-mode . "")
