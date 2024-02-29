@@ -971,10 +971,10 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;; to make this work, run npm install -g pyright
 (use-package lsp-pyright
-  :custom
+  :init
   ;; see https://github.com/emacs-lsp/lsp-pyright/issues/66#issuecomment-1144136538
   ;; this will start a separate process for each lsp
-  (project-pyright-multi-root nil)
+  (setq lsp-pyright-multi-root nil)
   :hook (python-ts-mode . (lambda ()
                           (require 'lsp-pyright)
                           (lsp-deferred))))
