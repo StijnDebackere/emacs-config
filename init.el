@@ -919,7 +919,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;; add functionality to automatically load the correct python venv on
 ;; focus changes -> not required, lsp-pyright with
 ;; lsp-pyright-multi-root nil loads local venv correctly
-
 ;; (use-package pyvenv
 ;;   :ensure t)
 
@@ -933,22 +932,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;;   ))
 
 ;; (add-to-list 'window-selection-change-functions 'switch-python-venv)
-
-(use-package python
-  :config
-  (unbind-key "C-c C-d" python-mode-map))
-
-(use-package python-black
-  :demand t
-  :after python
-  :hook (python-mode . python-black-on-save-mode-enable-dwim))
-
-(defcustom lsp-ruff-executable "ruff-lsp"
-  "Command to start the Ruff language server."
-  :group 'lsp-python
-  :risky t
-  :type 'file)
-
 
 ;;;; lsp
 ;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
@@ -966,20 +949,6 @@ point reaches the beginning or end of the buffer, stop there."
   ("s-l" . lsp-keymap-prefix)
   ("M-<tab>" . lsp-execute-code-action)
   :commands (lsp lsp-deferred)
-  :config
-  ;; configuration of remote python language server
-  (lsp-register-client
-   (make-lsp-client :new-connection
-                    (lsp-tramp-connection "pyright")
-                    :major-modes '(python-mode)
-                    :remote? t
-                    :server-id 'pyls-remote))
-  (lsp-register-client
-   (make-lsp-client
-    :new-connection (lsp-stdio-connection (lambda () (list lsp-ruff-executable)))
-    :activation-fn (lsp-activate-on() "python")
-    :add-on? t
-    :server-id 'ruff-lsp))
   :custom
   (lsp-prefer-capf t)
   (lsp-idle-delay 0.0)
@@ -998,6 +967,9 @@ point reaches the beginning or end of the buffer, stop there."
   :hook (python-ts-mode . (lambda ()
                           (require 'lsp-pyright)
                           (lsp-deferred))))
+  ;; for lsp-ruff, make sure to install ruff-lsp somewhere on the
+  ;; exec-path
+
 
 ;; to use LanguageTool for spelling and grammar checking
 ;; (use-package lsp-ltex
@@ -1149,13 +1121,15 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(fci-rule-color "#ECEFF1")
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
+ '(lsp-ruff-lsp-show-notifications "always")
  '(package-selected-packages
-   '(rg flymake-sqlfluff all-the-icons-ivy treesit vterm hydra ace-window python-black yaml-mode
-        ws-butler keychain-environment ag gotham-theme projectile lsp-ui lsp-ivy flycheck lsp-mode
-        company solarized-theme tramp pinentry wgrep-ag visual-regexp-steroids super-save lua-mode
-        all-the-icons-ivy-rich-mode all-the-icons-dired all-the-icons-ivy-rich powerline
-        all-the-icons avy-zap smartparens latex auctex tex material-theme multiple-cursors
-        buffer-move magit exec-path-from-shell diminish use-package))
+   '(jsonrpc editorconfig ligature rg flymake-sqlfluff all-the-icons-ivy treesit vterm hydra ace-window
+             python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui
+             lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag
+             visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode
+             all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens
+             latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell
+             diminish use-package))
  '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
