@@ -22,6 +22,26 @@
 (setq inhibit-startup-message t)
 (setq initial-scratch-message "")
 
+;; Bootstrap straight.el
+(defvar bootstrap-version)
+(let ((bootstrap-file
+       (expand-file-name
+        "straight/repos/straight.el/bootstrap.el"
+        (or (bound-and-true-p straight-base-dir)
+            user-emacs-directory)))
+      (bootstrap-version 7))
+  (unless (file-exists-p bootstrap-file)
+    (with-current-buffer
+        (url-retrieve-synchronously
+         "https://raw.githubusercontent.com/radian-software/straight.el/develop/install.el"
+         'silent 'inhibit-cookies)
+      (goto-char (point-max))
+      (eval-print-last-sexp)))
+  (load bootstrap-file nil 'nomessage))
+
+(straight-use-package 'use-package)
+(straight-use-package 'diminish)
+
 ;; Set up package
 (require 'package)
 (add-to-list 'package-archives
@@ -30,17 +50,7 @@
 (when (boundp 'package-pinned-packages)
   (setq package-pinned-packages
         '((org-plus-contrib . "org"))))
-(package-initialize)
 
-
-;;;; use-package.el
-;; Install use-package if it's not already installed.
-;; use-package is used to configure the rest of the packages.
-(unless (or (package-installed-p 'use-package)
-            (package-installed-p 'diminish))
-  (package-refresh-contents)
-  (package-install 'use-package)
-  (package-install 'diminish))
 
 ;; From use-package README
 (eval-when-compile
@@ -821,8 +831,6 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package all-the-icons-dired)
 (use-package all-the-icons-ivy-rich
   :init (all-the-icons-ivy-rich-mode 1))
-
-
 
 ;;;; powerline
 (use-package powerline
