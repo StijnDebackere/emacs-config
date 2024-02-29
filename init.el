@@ -277,6 +277,10 @@
                                    "\\subparagraph")))))))
 
 
+(use-package minions
+  :config
+  (minions-mode 1))
+
 ;;;; Text
 ;; ;; Disabled because it annoys me in COMMIT_MSG and yml files...
 ;; (defun sdb/enable-dead-keys ()
