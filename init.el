@@ -951,16 +951,24 @@ point reaches the beginning or end of the buffer, stop there."
 
 (use-package lsp-mode
   ;; do not show yas when lsp-mode enabled
-  :diminish (yas-minor-mode . "")
-  :after (yasnippet)
+  ;; :diminish (yas-minor-mode . "")
+  ;; :after (yasnippet)
   :hook
+  (
+   (prog-mode . lsp-mode)
+   (sh-mode . lsp-mode)
+   (text-mode . (lambda ()
+                  ;; If something enabled lsp-mode for this buffer, turn it off.
+                  (when (bound-and-true-p lsp-mode)
+                    (lsp-mode -1)))))
   ;; enable yas-minor-mode on lsp-mode to fix completion error
-  (lsp-mode . yas-minor-mode)
+   ;; (lsp-mode . yas-minor-mode))
   :bind
   ("s-l" . lsp-keymap-prefix)
   ("M-<tab>" . lsp-execute-code-action)
   :commands (lsp lsp-deferred)
   :custom
+  (lsp-ruff-server-command '("ruff" "server"))
   (lsp-prefer-capf t)
   (lsp-idle-delay 0.0)
   (lsp-enable-snippet nil)
@@ -978,11 +986,11 @@ point reaches the beginning or end of the buffer, stop there."
   :hook (python-ts-mode . (lambda ()
                           (require 'lsp-pyright)
                           (lsp-deferred))))
-  ;; for lsp-ruff, make sure to install ruff-lsp somewhere on the
-  ;; exec-path
+  ;; [DEPRECATED] for lsp-ruff, make sure to install ruff-lsp somewhere on the
+  ;; exec-path => now use `ruff server` directly
 
 
-;; to use LanguageTool for spelling and grammar checking
+;; ;; to use LanguageTool for spelling and grammar checking
 ;; (use-package lsp-ltex
 ;;   :ensure t
 ;;   :hook (text-mode . (lambda ()
@@ -1024,7 +1032,7 @@ point reaches the beginning or end of the buffer, stop there."
   :bind
   ("s->" . lsp-ui-find-next-reference)
   ("s-<" . lsp-ui-find-prev-reference)
-  ("C-c C-d" . lsp-ui-doc-glance)
+  ("C-c C-d" . lsp-ui-doc-glance)  ;; default ("s-l h g")
   :custom
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
@@ -1127,21 +1135,12 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(ansi-color-names-vector
    (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
  '(company-show-quick-access t nil nil "Customized with use-package company")
+ '(copilot-indent-offset-warning-disable t)
  '(custom-safe-themes
    '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
  '(fci-rule-color "#ECEFF1")
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
- '(lsp-ruff-lsp-show-notifications "always")
- '(package-selected-packages
-   '(jsonrpc editorconfig ligature rg flymake-sqlfluff all-the-icons-ivy treesit vterm hydra ace-window
-             python-black yaml-mode ws-butler keychain-environment ag gotham-theme projectile lsp-ui
-             lsp-ivy flycheck lsp-mode company solarized-theme tramp pinentry wgrep-ag
-             visual-regexp-steroids super-save lua-mode all-the-icons-ivy-rich-mode
-             all-the-icons-dired all-the-icons-ivy-rich powerline all-the-icons avy-zap smartparens
-             latex auctex tex material-theme multiple-cursors buffer-move magit exec-path-from-shell
-             diminish use-package))
- '(smartparens-global-mode t)
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
    '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b")
@@ -1154,5 +1153,4 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(smartparens-global-mode t)
  '(vc-annotate-color-map '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000") (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f"))))
