@@ -41,6 +41,7 @@
 
 (straight-use-package 'use-package)
 (straight-use-package 'diminish)
+(straight-use-package 'gptel)
 
 ;; Set up package
 (require 'package)
@@ -56,7 +57,6 @@
 (eval-when-compile
   (require 'use-package)
   (setq use-package-always-ensure t))
-(require 'diminish)                ;; if you use :diminish
 (require 'bind-key)
 
 ;;;; Server start-up
@@ -100,6 +100,25 @@
                          iterm-app-path
                        iterm-brew-path)))
     (start-process "sdb-open-dir-process" nil "open" "-a" iterm-path ".")))
+
+;; https://github.com/syl20bnr/spacemacs/blob/0bbb4/layers/spacemacs/spacemacs-defaults/funcs.el#L779-L787
+(defun sdb--file-path ()
+  "Retrieve the file path of the current buffer.
+
+Returns:
+  - A string containing the file path in case of success.
+  - `nil' in case the current buffer does not have a directory."
+  (when-let (file-path (buffer-file-name))
+    (file-truename file-path)))
+(defun sdb/copy-file-name ()
+  "Copy and show the file name of the current buffer."
+  (interactive)
+  (if-let* ((file-path (sdb--file-path))
+            (file-name (file-name-nondirectory file-path)))
+      (progn
+        (kill-new file-name)
+        (message "%s" file-name))
+    (message "WARNING: Current buffer is not attached to a file!")))
 
 (bind-key "C-c o f" 'open-dir-in-finder)
 (bind-key "C-c o t" 'open-dir-in-iterm)
@@ -433,6 +452,9 @@
   :config
   (ivy-mode 1)
   :custom
+  ;; see https://github.com/abo-abo/swiper/issues/1169#issuecomment-323738674
+  ;; selects the prompt when using `previous-line' which can bypass autocomplete
+  (ivy-use-selectable-prompt t)
   (ivy-use-virtual-buffers t)
   (enable-recursive-minibuffers t)
   (ivy-count-format "%d/%d ")
@@ -820,7 +842,7 @@ point reaches the beginning or end of the buffer, stop there."
 ;; brew cask install font-source-code-pro
 (add-to-list 'default-frame-alist
              (cond
-              ((string-equal system-type "darwin")    '(font . "Iosevka Comfy 16"))
+              ((string-equal system-type "darwin")    '(font . "Iosevka Comfy 18"))
               ((string-equal system-type "gnu/linux") '(font . "Iosevka Comfy 14"))))
 
 (use-package ligature
@@ -900,11 +922,13 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package copilot
   :straight (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
   :ensure t
+  ;; :hook (prog-mode . (lambda ()
+  ;;                      (unless (derived-mode-p 'sql-mode))
+  ;;                      copilot-mode))
   :hook (prog-mode . copilot-mode)
   :diminish (copilot-mode . "")
   :bind (:map copilot-completion-map
-              ("TAB" . copilot-accept-completion)
-              )
+              ("TAB" . copilot-accept-completion))
   )
 
 ;;;; Flycheck
