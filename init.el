@@ -375,16 +375,72 @@ Returns:
 
 ;;; magit
 (use-package magit
-  :bind (("C-x g" . magit-status)
-         ("C-c f" . magit-file-dispatch)
-         ("C-c g" . magit-dispatch))
+  :bind
+  (("C-x g" . magit-status)
+   ("C-c f" . magit-file-dispatch)
+   ("C-c g" . magit-dispatch))
   :config
   (global-auto-revert-mode 1)
+  ;; Add a suffix to an existing transient
   :custom
   (magit-log-arguments (quote ("--decorate" "-n256")))
   (magit-refresh-status-buffer nil)
   (remove-hook 'server-switch-hook 'magit-commit-diff)
   (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
+
+;; See https://docs.magit.vc/forge/Setup-for-Githubcom.html
+(setq auth-sources '("~/.authinfo"))
+(use-package forge
+  :after magit
+  :bind
+  ("C-c n" . forge-dispatch)
+  :config
+  (transient-append-suffix 'forge-dispatch "/ a"
+    '("R" "pr-review" my/pr-review-from-forge))
+  (transient-append-suffix 'forge-dispatch "R"
+    '("j" "jump to pr-review" my/pr-review-jump-to-file-in-pr)))
+
+
+;; (use-package code-review
+;;   :straight (:host github :repo "doomelpa/code-review")
+;;   :ensure t
+;;   :after magit
+;;   :custom
+;;   (code-review-auth-login-marker 'forge)
+;;   )
+
+(use-package pr-review
+  :straight (:host github :repo "blahgeek/emacs-pr-review" :files ("*.el" "graphql"))
+  :ensure t
+  :after (magit forge)
+  ;; see https://gitlab.com/magus/mes/-/blob/86153/lisp/mes-dev-basics.el#L76
+  :config
+  (load-file (expand-file-name "~/.emacs.d/sdb/pr-review-mods.el"))
+  ;; Customize your settings
+  (setq my/pr-review-main-branch-name "main")
+  (setq my/pr-review-repo-base-dir "~/repos")
+  (transient-define-prefix pr-review-dispatch ()
+    "Main dispatch menu for your-mode"
+    ["Actions"
+     ("e" "Comment" pr-review-context-comment)
+     ("d" "Ediff" my/pr-review-ediff-with-main)
+     ("a" "Action" pr-review-context-action)
+     ("R" "Refresh" pr-review-refresh)
+     ("c" "Submit" pr-review-submit-review)
+     ("o" "Open in browser" pr-review-open-in-default-browser)])
+  ;; Bind it to a key
+  :bind
+  ("C-c j" . my/pr-review-jump-to-file-in-pr)
+  ("C-c c" . my/pr-review-comment-on-region)
+  (:map pr-review-mode-map
+        ("?" . pr-review-dispatch)
+        ("RET" . my/pr-review-visit-file)
+        ("e" . pr-review-context-comment)
+        ("d" . my/pr-review-ediff-with-main)
+        ("a" . pr-review-context-action)
+        ("R" . pr-review-refresh)
+        ("c" . pr-review-submit-review)
+        ("o" . pr-review-open-in-default-browser)))
 
 ;;; ediff
 (use-package ediff
