@@ -309,8 +309,15 @@ If the file is already visible in the current frame, focuses that window."
             (if window
                 ;; Buffer already visible, select its window
                 (select-window window)
-              ;; Buffer not visible, open it in current window
-              (switch-to-buffer file-buffer))
+              ;; Buffer not visible, open it in another window
+              (progn
+                (if (one-window-p t (selected-frame))
+                    (progn
+                      (split-window-right)
+                      (other-window 1)
+                      (switch-to-buffer file-buffer))
+                  (other-window 1)
+                  (switch-to-buffer file-buffer))))
 
             (when target-line
               (goto-char (point-min))
@@ -346,7 +353,14 @@ If the file is already visible in the current frame, focuses that window."
           (let ((window (get-buffer-window existing-buffer (selected-frame))))
             (if window
                 (select-window window)
-              (switch-to-buffer existing-buffer)))
+              (progn
+                (if (one-window-p t (selected-frame))
+                    (progn
+                      (split-window-right)
+                      (other-window 1)
+                      (switch-to-buffer existing-buffer))
+                  (other-window 1)
+                  (switch-to-buffer existing-buffer)))))
 
           ;; Jump to target line if we have one
           (when target-line
@@ -499,15 +513,20 @@ Returns the buffer or signals an error if none exist."
                        nil t))))))
 
 (defun my/pr-review--switch-to-buffer (buffer)
-  "Switch to BUFFER, reusing its window if already visible in current frame.
+  "Switch to BUFFER in another window within the current frame.
 If the buffer is already displayed in a window, select that window.
-Otherwise, switch to the buffer in the current window."
+Otherwise, if another window exists in the frame, switch to it and display the buffer.
+If only one window exists, split vertically and display the buffer in the new window."
   (let ((window (get-buffer-window buffer (selected-frame))))
     (if window
-        ;; Buffer is already visible, just select its window
         (select-window window)
-      ;; Buffer not visible, switch to it in current window
-      (switch-to-buffer buffer))))
+      (if (one-window-p t (selected-frame))
+          (progn
+            (split-window-right)
+            (other-window 1)
+            (switch-to-buffer buffer))
+        (other-window 1)
+        (switch-to-buffer buffer)))))
 
 (defun my/pr-review-jump-to-file-in-pr ()
   "Jump from current file buffer back to the PR review buffer.
@@ -614,27 +633,24 @@ If the PR buffer is already visible in the current frame, focuses that window."
         (push-mark (plist-get result :end-pos) t t)
         (recenter)
         (if (plist-get result :exact-match)
-            (message "Region selected in PR diff (lines %d-%d). Press C-c C-c to add comment."
+            (message "Region selected in PR diff (lines %d-%d). Adding comment..."
                     start-line end-line)
-          (message "Region selected in PR diff (lines %d-%d, closest to %d-%d). Press C-c C-c to add comment."
+          (message "Region selected in PR diff (lines %d-%d, closest to %d-%d). Adding comment..."
                   start-line end-line
                   (plist-get result :closest-start)
                   (plist-get result :closest-end)))
-        ;; Call pr-review's comment function if available
-        (when (fboundp 'pr-review-comment-add)
-          (call-interactively 'pr-review-comment-add)))
+        (pr-review-context-comment))
 
        ;; Single line
        (t
         (goto-char (plist-get result :start-pos))
         (recenter)
         (if (plist-get result :exact-match)
-            (message "Positioned at line %d in PR diff. Press C-c C-c to add comment."
+            (message "Positioned at line %d in PR diff. Adding comment..."
                     start-line)
-          (message "Positioned at closest line %d in PR diff (requested %d). Press C-c C-c to add comment."
+          (message "Positioned at closest line %d in PR diff (requested %d). Adding comment..."
                   (plist-get result :closest-start) start-line))
-        (when (fboundp 'pr-review-comment-add)
-          (call-interactively 'pr-review-comment-add)))))))
+        (pr-review-context-comment))))))
 
 ;; Helper function to open pr-review from magit with forge integration
 (defun my/pr-review-from-forge ()

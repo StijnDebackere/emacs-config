@@ -41,7 +41,28 @@
 
 (straight-use-package 'use-package)
 (straight-use-package 'diminish)
-(straight-use-package 'gptel)
+(use-package gptel
+  :straight (:host github :repo "karthink/gptel" :files ("*.el" "test"))
+  :ensure t
+  :config
+  ;; Register GitHub Copilot backend
+  (setq gptel-backend (gptel-make-gh-copilot "Copilot")
+        gptel-model 'claude-sonnet-4.5)
+  (transient-define-prefix gptel-dispatch ()
+    "Dispatch menu for gptel commands."
+    ["gptel Actions"
+     ("r" "Rewrite" gptel-rewrite)
+     ("a" "Add" gptel-add)])
+  (setq gptel-context-highlight-method 'overlay)
+  (set-face-attribute 'gptel-context-highlight-face nil
+                      :background "#2a2a2a"  ; subtle gray
+                      :extend t              ; extend to end of line
+                      :underline nil
+                      :weight 'normal)
+  :bind
+  ("C-c p" . gptel-dispatch)
+  ("C-c a" . gptel-add)
+  ("C-c RET" . gptel-rewrite))
 
 ;; Set up package
 (require 'package)
