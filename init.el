@@ -47,7 +47,16 @@
   :config
   ;; Register GitHub Copilot backend
   (setq gptel-backend (gptel-make-gh-copilot "Copilot")
-        gptel-model 'claude-sonnet-4.5)
+        gptel-model 'claude-sonnet-4.5
+        gptel-use-curl t
+        ;; TODO: update `gptel' such that PDFs work as media, see here
+        ;; https://github.com/karthink/gptel/issues/929
+        gptel-track-media t)
+  (add-hook 'gptel-mode-hook
+            (lambda ()
+              (when (and gptel-model
+                         (gptel--model-capable-p 'media))
+                (setq-local gptel-track-media t))))
   (transient-define-prefix gptel-dispatch ()
     "Dispatch menu for gptel commands."
     ["gptel Actions"
@@ -415,11 +424,11 @@ Returns:
   :after magit
   :bind
   ("C-c n" . forge-dispatch)
+  :hook
+  (magit-mode . forge-pull)
   :config
   (transient-append-suffix 'forge-dispatch "/ a"
-    '("R" "pr-review" my/pr-review-from-forge))
-  (transient-append-suffix 'forge-dispatch "R"
-    '("j" "jump to pr-review" my/pr-review-jump-to-file-in-pr)))
+    '("R" "pr-review" my/pr-review-from-forge)))
 
 
 ;; (use-package code-review

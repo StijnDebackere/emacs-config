@@ -17,6 +17,10 @@
 (defvar-local pr-review--pr-branch-name nil
   "Local branch name for the current PR.")
 
+;; Variable to store the PR base branch name
+(defvar-local pr-review--pr-base-branch-name nil
+  "Base branch name that the PR targets (e.g., main, master, develop).")
+
 ;; Hook to capture git directory when pr-review-mode is activated
 (defun my/pr-review-capture-git-dir ()
   "Capture the git directory for the current pr-review buffer."
@@ -58,14 +62,15 @@
 (add-hook 'pr-review-mode-hook #'my/pr-review-set-pending-git-dir)
 
 ;; Customizable base directory
-(defcustom my/pr-review-repo-base-dir "~/projects"
+(defcustom my/pr-review-repo-base-dir "~/repos"
   "Base directory where git repositories are stored."
   :type 'directory
   :group 'pr-review)
 
-(defcustom my/pr-review-main-branch-name "main"
-  "Name of the main/master branch to compare against.
-Common values are 'main', 'master', 'trunk', 'develop'."
+(defcustom my/pr-review-base-branch-name "main"
+  "Fallback name of the base branch to compare against.
+Common values are 'main', 'master', 'trunk', 'develop'.
+This is only used if the base branch cannot be determined from the PR."
   :type 'string
   :group 'pr-review)
 
@@ -85,9 +90,24 @@ Common values are 'main', 'master', 'trunk', 'develop'."
   "Get the cached local branch name for the current PR, if it exists."
   pr-review--pr-branch-name)
 
+(defun my/pr-review-get-pr-base-branch ()
+  "Get the base branch that the PR targets.
+Returns the cached value if available, otherwise queries forge."
+  (or pr-review--pr-base-branch-name
+      (let* ((git-dir (my/pr-review-get-git-dir))
+             (pr-number (my/pr-review-get-pr-number)))
+        (when (and git-dir pr-number)
+          (let ((default-directory git-dir))
+            (when (fboundp 'forge-get-repository)
+              (when-let* ((repo (forge-get-repository :tracked))
+                         (pullreq (forge-get-pullreq repo pr-number))
+                         (base-ref (and pullreq (oref pullreq base-ref))))
+                (setq pr-review--pr-base-branch-name base-ref)
+                base-ref)))))))
 
 (defun my/pr-review-ensure-pr-branch ()
   "Ensure the PR branch exists locally, creating it with forge if needed.
+Does not check out the branch - leaves that to individual functions.
 Returns the branch name."
   (let* ((git-dir (my/pr-review-get-git-dir))
          (pr-number (my/pr-review-get-pr-number))
@@ -99,43 +119,51 @@ Returns the branch name."
     (unless pr-number
       (user-error "Could not determine PR number"))
 
-    ;; If branch doesn't exist, create it using forge
-    (unless branch-name
-      (let ((default-directory git-dir))
-        (unless (fboundp 'forge-branch-pullreq)
-          (user-error "Forge is not installed. Please install magit-forge"))
+    (let ((default-directory git-dir))
+      (unless (fboundp 'forge-branch-pullreq)
+        (user-error "Forge is not installed. Please install magit-forge"))
 
-        (message "Creating local branch for PR #%s using forge..." pr-number)
+      (let* ((repo (forge-get-repository :tracked))
+             (pullreq (forge-get-pullreq repo pr-number))
+             (remote-branch (and pullreq (oref pullreq head-ref)))
+             (local-branch-exists (and remote-branch
+                                       (member remote-branch (magit-list-local-branch-names)))))
 
-        ;; Get the pullreq object from forge database
-        (let* ((repo (forge-get-repository t))
-               (pullreq (forge-get-pullreq repo pr-number))
-               (current-branch (magit-get-current-branch)))
+        (unless pullreq
+          (user-error "PR #%s not found in forge database. Try running `forge-pull' first" pr-number))
 
-          (unless pullreq
-            (user-error "PR #%s not found in forge database. Try running `forge-pull' first" pr-number))
+        (unless remote-branch
+          (user-error "Could not determine remote branch name for PR #%s" pr-number))
 
-          ;; Create the branch using forge-branch-pullreq
-          ;; This function creates the branch and returns the branch name
-          (forge-branch-pullreq pullreq)
+        ;; Cache the base branch from the PR
+        (when pullreq
+          (setq pr-review--pr-base-branch-name (oref pullreq base-ref)))
 
-          ;; Capture the branch name that forge created
-          ;; forge-branch-pullreq checks out the new branch, so we can get it from current branch
-          (setq branch-name (magit-get-current-branch))
+        (cond
+         ((and local-branch-exists (string= branch-name remote-branch))
+          (message "PR branch already exists locally: %s" remote-branch)
+          (setq branch-name remote-branch))
 
-          ;; Store it for future use
+         ((and local-branch-exists (not (string= branch-name remote-branch)))
+          (message "Local branch exists but doesn't match stored name. Using: %s" remote-branch)
+          (setq branch-name remote-branch)
+          (setq pr-review--pr-branch-name branch-name))
+
+         (t
+          (message "Creating local branch for PR #%s using forge..." pr-number)
+          (let ((original-branch (magit-get-current-branch)))
+            (forge-branch-pullreq pullreq)
+            ;; forge-branch-pullreq checks out the new branch, so switch back
+            (when (and original-branch
+                      (not (string= original-branch remote-branch)))
+              (magit--checkout original-branch)))
+          (setq branch-name remote-branch)
           (setq pr-review--pr-branch-name branch-name)
-
           (unless branch-name
             (user-error "Failed to create PR branch"))
+          (message "Created PR branch: %s" branch-name)))))
 
-          (message "Created branch: %s" branch-name)
-
-          ;; Optionally switch back to the original branch if desired
-          ;; Uncomment the next line if you don't want to stay on the PR branch
-          ;; (when current-branch (magit-checkout current-branch))
-          )))
-
+    (message "Using PR branch: %s" branch-name)
     branch-name))
 
 (defun my/pr-review-get-file-path-at-point ()
@@ -160,9 +188,9 @@ Returns the branch name."
          (when (and parent (magit-file-section-p parent))
            (oref parent value))))))))
 
-(defun my/pr-review-ediff-with-main ()
-  "Ediff the file at point between the PR branch and main branch.
-If main branch doesn't exist locally, prompts for branch selection.
+(defun my/pr-review-ediff-with-base ()
+  "Ediff the file at point between the PR branch and base branch.
+If base branch doesn't exist locally, prompts for branch selection.
 Creates the PR branch locally using forge if it doesn't exist."
   (interactive)
   (unless (derived-mode-p 'pr-review-mode)
@@ -170,18 +198,19 @@ Creates the PR branch locally using forge if it doesn't exist."
 
   (let* ((git-dir (my/pr-review-get-git-dir))
          (default-directory (or git-dir default-directory))
-         (main-branch my/pr-review-main-branch-name)
+         (base-branch (or (my/pr-review-get-pr-base-branch)
+                         my/pr-review-base-branch-name))
          (branch-exists (and git-dir
                             (zerop (call-process "git" nil nil nil
                                                "rev-parse" "--verify"
-                                               (concat "refs/heads/" main-branch))))))
+                                               (concat "refs/heads/" base-branch))))))
 
     (if branch-exists
-        ;; Main branch exists, use it directly
-        (my/pr-review-ediff-with-branch main-branch)
-      ;; Main branch doesn't exist, ask user to select a branch
+        ;; Base branch exists, use it directly
+        (my/pr-review-ediff-with-branch base-branch)
+      ;; Base branch doesn't exist, ask user to select a branch
       (progn
-        (message "Branch '%s' not found in local repository" main-branch)
+        (message "Branch '%s' not found in local repository" base-branch)
         (call-interactively #'my/pr-review-ediff-with-branch)))))
 
 (defun my/pr-review-ediff-with-branch (branch)
@@ -190,6 +219,8 @@ Creates the PR branch locally using forge if it doesn't exist."
   (interactive
    (list (let* ((git-dir (my/pr-review-get-git-dir))
                 (default-directory (or git-dir default-directory))
+                (base-branch (or (my/pr-review-get-pr-base-branch)
+                                my/pr-review-base-branch-name))
                 (branches (and git-dir
                               (magit-list-local-branch-names))))
            (if branches
@@ -199,8 +230,8 @@ Creates the PR branch locally using forge if it doesn't exist."
                               t      ; require-match
                               nil    ; initial-input
                               nil    ; hist
-                              my/pr-review-main-branch-name) ; default
-             (read-string "Compare PR with branch: " my/pr-review-main-branch-name)))))
+                              base-branch) ; default
+             (read-string "Compare PR with branch: " base-branch)))))
 
   (unless (derived-mode-p 'pr-review-mode)
     (user-error "Not in a pr-review buffer"))
@@ -271,108 +302,93 @@ Creates the PR branch locally using forge if it doesn't exist."
   (interactive)
   (let ((git-dir (my/pr-review-get-git-dir))
         (pr-number (my/pr-review-get-pr-number))
-        (pr-branch (my/pr-review-get-pr-branch-name)))
-    (message "Git dir: %s | PR: #%s | Branch: %s"
+        (pr-branch (my/pr-review-get-pr-branch-name))
+        (base-branch (my/pr-review-get-pr-base-branch)))
+    (message "Git dir: %s | PR: #%s | Branch: %s -> %s"
              (or git-dir "not found")
              (or pr-number "unknown")
-             (or pr-branch "not checked out"))))
+             (or pr-branch "not checked out")
+             (or base-branch "unknown"))))
 
 (defun my/pr-review-visit-file ()
   "Visit the file at point from the PR branch in a new buffer.
 If point is on a modified line in a hunk, jump to that line in the file.
-If the file is already visible in the current frame, focuses that window."
+If the file is already visible in the current frame, focuses that window.
+Handles renamed files by checking magit-section properties."
   (interactive)
   (unless (derived-mode-p 'pr-review-mode)
     (user-error "Not in a pr-review buffer"))
 
-  (let* ((file-path (my/pr-review-get-file-path-at-point))
+  (let* ((diff-info (pr-review--get-diff-line-info (point)))
+         (diff-side (car diff-info))  ; "LEFT" or "RIGHT"
+         (file-path (car (cdr diff-info)))  ; filename from (filename . line)
+         (target-line (cdr (cdr diff-info)))  ; line from (filename . line)
+         (is-removed-line (equal diff-side "LEFT"))
+         (section (get-text-property (point) 'magit-section))
+         (file-section (when section
+                         (let ((parent section))
+                           (while (and parent (not (magit-file-section-p parent)))
+                             (setq parent (oref parent parent)))
+                           parent)))
+         ;; Check if the file was renamed by looking at magit-section properties
+         (renamed-p (and file-section
+                        (slot-boundp file-section 'source)
+                        (oref file-section source)))
+         ;; For removed lines in renamed files, use the original name
+         (actual-file-path (if (and is-removed-line renamed-p)
+                               (oref file-section source)
+                             file-path))
          (git-dir (my/pr-review-get-git-dir))
          (pr-branch (my/pr-review-ensure-pr-branch))
-         ;; Try to get the line number from the right side (HEAD) of the diff
-         (target-line (when-let ((right-prop (get-text-property (point) 'pr-review-diff-line-right)))
-                       (cdr right-prop))))
+         (base-branch (or (my/pr-review-get-pr-base-branch)
+                         my/pr-review-base-branch-name))
+         (target-branch (if is-removed-line
+                            base-branch
+                          pr-branch)))
 
-    (unless file-path
+    (unless actual-file-path
       (user-error "No file at point"))
 
     (unless git-dir
       (user-error "Git directory not found"))
 
-    (let ((default-directory git-dir)
-          (full-path (expand-file-name file-path git-dir)))
+    (message "file-path at point: %s" file-path)
+    (message "actual-file-path: %s" actual-file-path)
+    (message "is-removed-line: %s" is-removed-line)
+    (message "target-line is %s in branch %s" target-line target-branch)
 
-      ;; Check if the file exists in the working tree
-      (if (file-exists-p full-path)
-          ;; File exists in working tree, visit it with smart window switching
-          (let* ((file-buffer (find-file-noselect full-path))
-                 (window (get-buffer-window file-buffer (selected-frame))))
-            (if window
-                ;; Buffer already visible, select its window
-                (select-window window)
-              ;; Buffer not visible, open it in another window
+    (when renamed-p
+      (message "File renamed: %s -> %s"
+               (oref file-section source)
+               (oref file-section value)))
+
+    (let ((default-directory git-dir))
+      (let ((current-branch (magit-get-current-branch)))
+        (unless (string= current-branch target-branch)
+          (magit--checkout target-branch)
+          (magit-refresh)
+          (unless (string= (magit-get-current-branch) target-branch)
+            (user-error "Failed to checkout branch %s" target-branch)))))
+
+    (let* ((full-path (expand-file-name actual-file-path git-dir))
+           (file-buffer (find-file-noselect full-path))
+           (window (get-buffer-window file-buffer (selected-frame))))
+      (if window
+          (select-window window)
+        (progn
+          (if (one-window-p t (selected-frame))
               (progn
-                (if (one-window-p t (selected-frame))
-                    (progn
-                      (split-window-right)
-                      (other-window 1)
-                      (switch-to-buffer file-buffer))
-                  (other-window 1)
-                  (switch-to-buffer file-buffer))))
+                (split-window-right)
+                (other-window 1)
+                (switch-to-buffer file-buffer))
+            (other-window 1)
+            (switch-to-buffer file-buffer))))
 
-            (when target-line
-              (goto-char (point-min))
-              (forward-line (1- target-line))
-              (recenter)
-              (message "Jumped to line %d in %s" target-line file-path)))
-
-        ;; File doesn't exist in working tree, show it from the PR branch
-        (let* ((buffer-name (format "*%s:%s*" pr-branch file-path))
-               (existing-buffer (get-buffer buffer-name)))
-
-          ;; Create buffer if it doesn't exist
-          (unless existing-buffer
-            (setq existing-buffer (get-buffer-create buffer-name))
-            (with-current-buffer existing-buffer
-              (let ((content (with-temp-buffer
-                              (let ((exit-code (call-process "git" nil t nil
-                                                            "show"
-                                                            (format "%s:%s" pr-branch file-path))))
-                                (if (zerop exit-code)
-                                    (buffer-string)
-                                  (user-error "Failed to get file %s from branch %s"
-                                             file-path pr-branch))))))
-                (erase-buffer)
-                (insert content)
-                (set-buffer-modified-p nil)
-                (setq buffer-read-only t)
-                (setq default-directory git-dir)
-                (let ((mode (assoc-default file-path auto-mode-alist 'string-match)))
-                  (when mode (funcall mode))))))
-
-          ;; Use smart window switching
-          (let ((window (get-buffer-window existing-buffer (selected-frame))))
-            (if window
-                (select-window window)
-              (progn
-                (if (one-window-p t (selected-frame))
-                    (progn
-                      (split-window-right)
-                      (other-window 1)
-                      (switch-to-buffer existing-buffer))
-                  (other-window 1)
-                  (switch-to-buffer existing-buffer)))))
-
-          ;; Jump to target line if we have one
-          (when target-line
-            (goto-char (point-min))
-            (forward-line (1- target-line))
-            (recenter))
-
-          (if target-line
-              (message "Viewing %s from branch %s at line %d (read-only)"
-                      file-path pr-branch target-line)
-            (message "Viewing %s from branch %s (read-only)"
-                     file-path pr-branch)))))))
+      (when target-line
+        (goto-char (point-min))
+        (forward-line (1- target-line))
+        (recenter)
+        (message "Jumped to line %d in %s on branch %s" target-line actual-file-path target-branch)))))
 
 (defun my/pr-review--find-file-and-lines-in-pr (pr-buffer file-path start-line end-line)
   "Find FILE-PATH and line range in PR-BUFFER's diff.
@@ -667,5 +683,5 @@ This captures the git directory automatically."
     (user-error "No PR to review at point")))
 
 
-(provide 'pr-review-ediff-forge)
+(provide 'pr-review-mods)
 ;;; pr-review-mods.el ends here
