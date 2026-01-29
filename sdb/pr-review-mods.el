@@ -5,8 +5,8 @@
 ;; This approach uses forge-branch-pullreq to create a local branch of the PR
 
 ;;; Code:
-(require 'forge)
 (require 'magit)
+(require 'forge)
 (require 'pr-review)
 
 ;; Variable to store the git directory for the current PR
@@ -619,7 +619,7 @@ If the PR buffer is already visible in the current frame, focuses that window."
          (git-dir (locate-dominating-file current-file ".git"))
          (relative-path (and git-dir
                             (file-relative-name current-file git-dir))))
-
+    (deactivate-mark)
     (unless git-dir
       (user-error "Not in a git repository"))
 

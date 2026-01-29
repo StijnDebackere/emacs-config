@@ -41,37 +41,6 @@
 
 (straight-use-package 'use-package)
 (straight-use-package 'diminish)
-(use-package gptel
-  :straight (:host github :repo "karthink/gptel" :files ("*.el" "test"))
-  :ensure t
-  :config
-  ;; Register GitHub Copilot backend
-  (setq gptel-backend (gptel-make-gh-copilot "Copilot")
-        gptel-model 'claude-sonnet-4.5
-        gptel-use-curl t
-        ;; TODO: update `gptel' such that PDFs work as media, see here
-        ;; https://github.com/karthink/gptel/issues/929
-        gptel-track-media t)
-  (add-hook 'gptel-mode-hook
-            (lambda ()
-              (when (and gptel-model
-                         (gptel--model-capable-p 'media))
-                (setq-local gptel-track-media t))))
-  (transient-define-prefix gptel-dispatch ()
-    "Dispatch menu for gptel commands."
-    ["gptel Actions"
-     ("r" "Rewrite" gptel-rewrite)
-     ("a" "Add" gptel-add)])
-  (setq gptel-context-highlight-method 'overlay)
-  (set-face-attribute 'gptel-context-highlight-face nil
-                      :background "#2a2a2a"  ; subtle gray
-                      :extend t              ; extend to end of line
-                      :underline nil
-                      :weight 'normal)
-  :bind
-  ("C-c p" . gptel-dispatch)
-  ("C-c a" . gptel-add)
-  ("C-c RET" . gptel-rewrite))
 
 ;; Set up package
 (require 'package)
@@ -209,6 +178,9 @@ Returns:
 ;; Enable highlighting in documents
 (global-hi-lock-mode 1)
 
+;; Enable syntac highlighting
+(global-font-lock-mode 1)
+
 ;; show matching parens and set no delay
 (setq show-paren-delay 0)
 (show-paren-mode t)
@@ -267,6 +239,45 @@ Returns:
       auto-save-interval 300            ; number of keystrokes between auto-saves
                                         ; (default: 300)
       fill-column 100)
+
+(use-package popper
+  :straight t
+  :bind (("C-'"   . popper-toggle)
+         ("M-'"   . popper-cycle)
+         ("C-M-'" . popper-toggle-type))
+  :init
+  (setq popper-reference-buffers
+        '("\\*Messages\\*"
+          "\\*Warnings\\*"
+          "Output\\*$"
+          "\\*Async Shell Command\\*"
+          help-mode
+          compilation-mode))
+  (popper-mode +1)
+  (popper-echo-mode +1))
+
+(use-package gptel
+  :straight (:host github :repo "karthink/gptel" :files ("*.el" "test"))
+  :ensure t
+  :config
+  ;; Register GitHub Copilot backend
+  (setq gptel-backend (gptel-make-gh-copilot "Copilot")
+        gptel-model 'claude-sonnet-4.5
+        gptel-use-curl t
+        ;; TODO: update `gptel' such that PDFs work as media, see here
+        ;; https://github.com/karthink/gptel/issues/929
+        gptel-track-media t)
+  ;; Ensure we enable sending media if the model allows it
+  (add-hook 'gptel-mode-hook
+            (lambda ()
+              (when (and gptel-model
+                         (gptel--model-capable-p 'media))
+                (setq-local gptel-track-media t))))
+  (setq gptel-context-highlight-method 'overlay)
+  :bind
+  ("C-c p" . gptel)
+  ("C-c a" . gptel-add)
+  ("C-c RET" . gptel-rewrite))
 
 ;;; automatic whitespace removal
 (use-package ws-butler
@@ -425,10 +436,7 @@ Returns:
   :bind
   ("C-c n" . forge-dispatch)
   :hook
-  (magit-mode . forge-pull)
-  :config
-  (transient-append-suffix 'forge-dispatch "/ a"
-    '("R" "pr-review" my/pr-review-from-forge)))
+  (magit-mode . forge-pull))
 
 
 ;; (use-package code-review
@@ -1209,16 +1217,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 ;;;; elisp
 (use-package eldoc
   :diminish (eldoc-mode . ""))
-
-;; ;;;; SQL
-;; (use-package sql
-;;   :hook (sql-mode . lsp-mode)
-;;   :custom
-;;   (setq lsp-sqls-workspace-config-path nil)
-;;   (setq lsp-sqls-connections
-;;         '(((driver . "postgresql") (dataSourceName . "host=live-main.c56d9jndqmv2.us-east-2.redshift.amazonaws.com port=5439 user=tf_stijn_debackere_an password=local dbname=klarprod sslmode=disable"))
-;;           ))
-;;   )
 
 ;; (load "~/.emacs.d/sdb-init.el")
 
