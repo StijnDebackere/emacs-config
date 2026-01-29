@@ -1,4 +1,4 @@
-;;; init.el --- Emacs init file
+;;; init.el --- Emacs init file  -*- lexical-binding: t; -*-
 
 ;; Maintainer: https://github.com/StijnDebackere
 
@@ -177,9 +177,6 @@ Returns:
 
 ;; Enable highlighting in documents
 (global-hi-lock-mode 1)
-
-;; Enable syntac highlighting
-(global-font-lock-mode 1)
 
 ;; show matching parens and set no delay
 (setq show-paren-delay 0)
@@ -466,10 +463,11 @@ Returns:
      ("R" "Refresh" pr-review-refresh)
      ("c" "Submit" pr-review-submit-review)
      ("o" "Open in browser" pr-review-open-in-default-browser)])
-  ;; Bind it to a key
   :bind
   ("C-c j" . my/pr-review-jump-to-file-in-pr)
   ("C-c c" . my/pr-review-comment-on-region)
+  (:map magit-mode-map
+        ("C-c r" . my/pr-review-from-forge))
   (:map pr-review-mode-map
         ("?" . pr-review-dispatch)
         ("RET" . my/pr-review-visit-file)
@@ -560,20 +558,19 @@ Returns:
      ("k" kill-buffer "kill")
      ("r" ivy--rename-buffer-action "rename"))))
 
-;;; counsel
 (use-package counsel
   :bind
-  (;; use swiper instead of isearch
-   ;; if you press M-j, word at point is inserted
-   ("C-s" . swiper)
-   ("M-x" . counsel-M-x)
-   ("C-x C-f" . counsel-find-file)
-   ("C-c C-t" . counsel-outline)
-   ;; Still not completely happy with this one
-   ;; not the same as helm-show-kill-ring
-   ("M-y" . counsel-yank-pop)
-   ;; If called with prefix argument, directory and args can be provided
-   ("C-c s" . counsel-ag))
+  ;; use swiper instead of isearch
+  ;; if you press M-j, word at point is inserted
+  ("C-s" . swiper)  ;; Press M-n within the `swiper-isearch-mode' to fill the word at point
+  ("M-x" . counsel-M-x)
+  ("C-x C-f" . counsel-find-file)
+  ("C-c C-t" . counsel-outline)
+  ;; Still not completely happy with this one
+  ;; not the same as helm-show-kill-ring
+  ("M-y" . counsel-yank-pop)
+  ;; If called with prefix argument, directory and args can be provided
+  ("C-c s" . counsel-ag)
   :custom
   ;; separate history items with line of dashes
   (counsel-yank-pop-separator (concat "\n" (make-string 70 ?-) "\n")))
@@ -1064,8 +1061,10 @@ point reaches the beginning or end of the buffer, stop there."
   ;; :after (yasnippet)
   :hook
   (
-   (prog-mode . lsp-mode)
    (sh-mode . lsp-mode)
+   (prog-mode . (lambda ()
+                        (unless (derived-mode-p 'emacs-lisp-mode)
+                          (lsp-deferred))))
    (text-mode . (lambda ()
                   ;; If something enabled lsp-mode for this buffer, turn it off.
                   (when (bound-and-true-p lsp-mode)
