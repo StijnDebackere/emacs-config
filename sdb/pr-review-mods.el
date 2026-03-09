@@ -4,6 +4,16 @@
 ;; Custom functions to ediff PR files using forge to checkout the PR branch locally
 ;; This approach uses forge-branch-pullreq to create a local branch of the PR
 
+;;; Ideas:
+;; - Implement toggling comments based on their status (RESOLVED, RESOLVED-OUTDATED, OUTDATED)
+;; - Implement toggling all headings above/below the current section
+;; - Implement toggling headings based on their depth
+;; - When jumping to a PR from a file, if no PR buffers are opened, check forge for PRs affecting that file, and prompt to open one.
+;; - When refreshing the `pr-review' buffer, also make sure that we pull any new changes to the local branch
+;; - Link the commits in the `pr-review' buffer to `magit' so that interacting with them takes you to the magit buffer for the relevant commit.
+;; - Also allow C-c c to comment on a selection from within the `pre-review' buffer
+;; - Allow saving PR review progress to pick up in a later session by loading from a file.
+
 ;;; Code:
 (require 'magit)
 (require 'forge)
@@ -22,7 +32,7 @@
   "Base branch name that the PR targets (e.g., main, master, develop).")
 
 ;; Hook to capture git directory when pr-review-mode is activated
-(defun my/pr-review-capture-git-dir ()
+(defun pr-review-capture-git-dir ()
   "Capture the git directory for the current pr-review buffer."
   (unless pr-review--local-git-dir
     (setq pr-review--local-git-dir
@@ -33,69 +43,69 @@
                        (repo (nth 1 pr-review--pr-path))
                        (base-dir (expand-file-name
                                  (format "%s/%s" owner repo)
-                                 my/pr-review-repo-base-dir))
+                                 pr-review-repo-base-dir))
                        (git-dir (locate-dominating-file base-dir ".git")))
              git-dir)))))
 
-(add-hook 'pr-review-mode-hook #'my/pr-review-capture-git-dir)
+(add-hook 'pr-review-mode-hook #'pr-review-capture-git-dir)
 
 ;; Advice to capture git directory when opening PR from magit
-(defun my/pr-review-capture-git-dir-advice (&rest _args)
+(defun pr-review-capture-git-dir-advice (&rest _args)
   "Capture the current git directory before opening pr-review."
   (when-let ((git-dir (and (or (derived-mode-p 'magit-mode)
                                (derived-mode-p 'magit-status-mode))
                            (magit-toplevel))))
-    (setq my/pr-review--pending-git-dir git-dir)))
+    (setq pr-review--pending-git-dir git-dir)))
 
-(defvar my/pr-review--pending-git-dir nil
+(defvar pr-review--pending-git-dir nil
   "Temporary storage for git directory when opening a PR.")
 
-(advice-add 'pr-review :before #'my/pr-review-capture-git-dir-advice)
+(advice-add 'pr-review :before #'pr-review-capture-git-dir-advice)
 
 ;; Enhanced hook to use the pending git dir
-(defun my/pr-review-set-pending-git-dir ()
+(defun pr-review-set-pending-git-dir ()
   "Set the git directory from pending storage if available."
-  (when my/pr-review--pending-git-dir
-    (setq-local pr-review--local-git-dir my/pr-review--pending-git-dir)
-    (setq my/pr-review--pending-git-dir nil)))
+  (when pr-review--pending-git-dir
+    (setq-local pr-review--local-git-dir pr-review--pending-git-dir)
+    (setq pr-review--pending-git-dir nil)))
 
-(add-hook 'pr-review-mode-hook #'my/pr-review-set-pending-git-dir)
+(add-hook 'pr-review-mode-hook #'pr-review-set-pending-git-dir)
 
 ;; Customizable base directory
-(defcustom my/pr-review-repo-base-dir "~/repos"
+(defcustom pr-review-repo-base-dir "~/repos"
   "Base directory where git repositories are stored."
   :type 'directory
   :group 'pr-review)
 
-(defcustom my/pr-review-base-branch-name "main"
+(defcustom pr-review-base-branch-name "main"
   "Fallback name of the base branch to compare against.
 Common values are 'main', 'master', 'trunk', 'develop'.
 This is only used if the base branch cannot be determined from the PR."
   :type 'string
   :group 'pr-review)
 
-(defun my/pr-review-get-git-dir ()
+(defun pr-review-get-git-dir ()
   "Get the git directory for the current pr-review buffer."
   (or pr-review--local-git-dir
       (progn
-        (my/pr-review-capture-git-dir)
+        (pr-review-capture-git-dir)
         pr-review--local-git-dir)))
 
-(defun my/pr-review-get-pr-number ()
+(defun pr-review-get-pr-number ()
   "Get the PR number from the current pr-review buffer."
   (when pr-review--pr-path
     (nth 2 pr-review--pr-path)))
 
-(defun my/pr-review-get-pr-branch-name ()
+(defun pr-review-get-pr-branch-name ()
   "Get the cached local branch name for the current PR, if it exists."
   pr-review--pr-branch-name)
 
-(defun my/pr-review-get-pr-base-branch ()
+(defun pr-review-get-pr-base-branch ()
   "Get the base branch that the PR targets.
 Returns the cached value if available, otherwise queries forge."
   (or pr-review--pr-base-branch-name
-      (let* ((git-dir (my/pr-review-get-git-dir))
-             (pr-number (my/pr-review-get-pr-number)))
+      (let* ((git-dir (pr-review-get-git-dir))
+             (pr-number (pr-review-get-pr-number)))
         (when (and git-dir pr-number)
           (let ((default-directory git-dir))
             (when (fboundp 'forge-get-repository)
@@ -105,13 +115,13 @@ Returns the cached value if available, otherwise queries forge."
                 (setq pr-review--pr-base-branch-name base-ref)
                 base-ref)))))))
 
-(defun my/pr-review-ensure-pr-branch ()
+(defun pr-review-ensure-pr-branch ()
   "Ensure the PR branch exists locally, creating it with forge if needed.
 Does not check out the branch - leaves that to individual functions.
 Returns the branch name."
-  (let* ((git-dir (my/pr-review-get-git-dir))
-         (pr-number (my/pr-review-get-pr-number))
-         (branch-name (my/pr-review-get-pr-branch-name)))
+  (let* ((git-dir (pr-review-get-git-dir))
+         (pr-number (pr-review-get-pr-number))
+         (branch-name (pr-review-get-pr-branch-name)))
 
     (unless git-dir
       (user-error "Git directory not found"))
@@ -166,7 +176,7 @@ Returns the branch name."
     (message "Using PR branch: %s" branch-name)
     branch-name))
 
-(defun my/pr-review-get-file-path-at-point ()
+(defun pr-review-get-file-path-at-point ()
   "Get the file path at point in pr-review buffer."
   (or
    ;; Try to get filename from diff line properties
@@ -188,7 +198,7 @@ Returns the branch name."
          (when (and parent (magit-file-section-p parent))
            (oref parent value))))))))
 
-(defun my/pr-review-ediff-with-base ()
+(defun pr-review-ediff-with-base ()
   "Ediff the file at point between the PR branch and base branch.
 If base branch doesn't exist locally, prompts for branch selection.
 Creates the PR branch locally using forge if it doesn't exist."
@@ -196,10 +206,10 @@ Creates the PR branch locally using forge if it doesn't exist."
   (unless (derived-mode-p 'pr-review-mode)
     (user-error "Not in a pr-review buffer"))
 
-  (let* ((git-dir (my/pr-review-get-git-dir))
+  (let* ((git-dir (pr-review-get-git-dir))
          (default-directory (or git-dir default-directory))
-         (base-branch (or (my/pr-review-get-pr-base-branch)
-                         my/pr-review-base-branch-name))
+         (base-branch (or (pr-review-get-pr-base-branch)
+                         pr-review-base-branch-name))
          (branch-exists (and git-dir
                             (zerop (call-process "git" nil nil nil
                                                "rev-parse" "--verify"
@@ -207,20 +217,20 @@ Creates the PR branch locally using forge if it doesn't exist."
 
     (if branch-exists
         ;; Base branch exists, use it directly
-        (my/pr-review-ediff-with-branch base-branch)
+        (pr-review-ediff-with-branch base-branch)
       ;; Base branch doesn't exist, ask user to select a branch
       (progn
         (message "Branch '%s' not found in local repository" base-branch)
-        (call-interactively #'my/pr-review-ediff-with-branch)))))
+        (call-interactively #'pr-review-ediff-with-branch)))))
 
-(defun my/pr-review-ediff-with-branch (branch)
+(defun pr-review-ediff-with-branch (branch)
   "Ediff the file at point between the PR branch and a specified BRANCH.
 Creates the PR branch locally using forge if it doesn't exist."
   (interactive
-   (list (let* ((git-dir (my/pr-review-get-git-dir))
+   (list (let* ((git-dir (pr-review-get-git-dir))
                 (default-directory (or git-dir default-directory))
-                (base-branch (or (my/pr-review-get-pr-base-branch)
-                                my/pr-review-base-branch-name))
+                (base-branch (or (pr-review-get-pr-base-branch)
+                                pr-review-base-branch-name))
                 (branches (and git-dir
                               (magit-list-local-branch-names))))
            (if branches
@@ -236,9 +246,9 @@ Creates the PR branch locally using forge if it doesn't exist."
   (unless (derived-mode-p 'pr-review-mode)
     (user-error "Not in a pr-review buffer"))
 
-  (let* ((file-path (my/pr-review-get-file-path-at-point))
-         (git-dir (my/pr-review-get-git-dir))
-         (pr-branch (my/pr-review-ensure-pr-branch)))
+  (let* ((file-path (pr-review-get-file-path-at-point))
+         (git-dir (pr-review-get-git-dir))
+         (pr-branch (pr-review-ensure-pr-branch)))
 
     (unless file-path
       (user-error "No file at point"))
@@ -297,20 +307,20 @@ Creates the PR branch locally using forge if it doesn't exist."
 
         (ediff-buffers branch-buffer pr-buffer)))))
 
-(defun my/pr-review-show-branch-info ()
+(defun pr-review-show-branch-info ()
   "Show git directory and PR branch information."
   (interactive)
-  (let ((git-dir (my/pr-review-get-git-dir))
-        (pr-number (my/pr-review-get-pr-number))
-        (pr-branch (my/pr-review-get-pr-branch-name))
-        (base-branch (my/pr-review-get-pr-base-branch)))
+  (let ((git-dir (pr-review-get-git-dir))
+        (pr-number (pr-review-get-pr-number))
+        (pr-branch (pr-review-get-pr-branch-name))
+        (base-branch (pr-review-get-pr-base-branch)))
     (message "Git dir: %s | PR: #%s | Branch: %s -> %s"
              (or git-dir "not found")
              (or pr-number "unknown")
              (or pr-branch "not checked out")
              (or base-branch "unknown"))))
 
-(defun my/pr-review-visit-file ()
+(defun pr-review-visit-file ()
   "Visit the file at point from the PR branch in a new buffer.
 If point is on a modified line in a hunk, jump to that line in the file.
 If the file is already visible in the current frame, focuses that window.
@@ -338,10 +348,10 @@ Handles renamed files by checking magit-section properties."
          (actual-file-path (if (and is-removed-line renamed-p)
                                (oref file-section source)
                              file-path))
-         (git-dir (my/pr-review-get-git-dir))
-         (pr-branch (my/pr-review-ensure-pr-branch))
-         (base-branch (or (my/pr-review-get-pr-base-branch)
-                         my/pr-review-base-branch-name))
+         (git-dir (pr-review-get-git-dir))
+         (pr-branch (pr-review-ensure-pr-branch))
+         (base-branch (or (pr-review-get-pr-base-branch)
+                         pr-review-base-branch-name))
          (target-branch (if is-removed-line
                             base-branch
                           pr-branch)))
@@ -390,7 +400,7 @@ Handles renamed files by checking magit-section properties."
         (recenter)
         (message "Jumped to line %d in %s on branch %s" target-line actual-file-path target-branch)))))
 
-(defun my/pr-review--find-file-and-lines-in-pr (pr-buffer file-path start-line end-line)
+(defun pr-review--find-file-and-lines-in-pr (pr-buffer file-path start-line end-line)
   "Find FILE-PATH and line range in PR-BUFFER's diff.
 START-LINE and END-LINE specify the range to find.
 Returns a plist with:
@@ -477,7 +487,7 @@ Returns a plist with:
               :closest-start (or closest-start-line start-line)
               :closest-end (or closest-end-line end-line start-line))))))
 
-(defun my/pr-review--get-pr-buffer (&optional file-path)
+(defun pr-review--get-pr-buffer (&optional file-path)
   "Get the PR review buffer to use.
 If FILE-PATH is provided, checks if it exists in any open PR and returns that buffer.
 If multiple PR buffers exist and FILE-PATH doesn't narrow it down, prompts user to choose.
@@ -528,7 +538,7 @@ Returns the buffer or signals an error if none exist."
                        (mapcar #'buffer-name pr-review-buffers)
                        nil t))))))
 
-(defun my/pr-review--switch-to-buffer (buffer)
+(defun pr-review--switch-to-buffer (buffer)
   "Switch to BUFFER in another window within the current frame.
 If the buffer is already displayed in a window, select that window.
 Otherwise, if another window exists in the frame, switch to it and display the buffer.
@@ -544,7 +554,7 @@ If only one window exists, split vertically and display the buffer in the new wi
         (other-window 1)
         (switch-to-buffer buffer)))))
 
-(defun my/pr-review-jump-to-file-in-pr ()
+(defun pr-review-jump-to-file-in-pr ()
   "Jump from current file buffer back to the PR review buffer.
 Jumps to the line in the diff closest to the current line position.
 If the file exists in an already-open PR buffer, automatically uses that buffer.
@@ -563,11 +573,11 @@ If the PR buffer is already visible in the current frame, focuses that window."
     (unless git-dir
       (user-error "Not in a git repository"))
 
-    (let* ((target-buffer (my/pr-review--get-pr-buffer relative-path))
-           (result (my/pr-review--find-file-and-lines-in-pr
+    (let* ((target-buffer (pr-review--get-pr-buffer relative-path))
+           (result (pr-review--find-file-and-lines-in-pr
                    target-buffer relative-path current-line nil)))
 
-      (my/pr-review--switch-to-buffer target-buffer)
+      (pr-review--switch-to-buffer target-buffer)
 
       (cond
        ;; File not found in PR
@@ -597,7 +607,7 @@ If the PR buffer is already visible in the current frame, focuses that window."
         (message "Jumped to file %s (no lines modified near line %d)"
                 relative-path current-line))))))
 
-(defun my/pr-review-comment-on-region ()
+(defun pr-review-comment-on-region ()
   "Create a PR review comment for the selected region in the local buffer.
 Jumps to the PR review buffer and starts a comment on the corresponding lines.
 If the region spans multiple lines, creates a multi-line comment.
@@ -623,11 +633,11 @@ If the PR buffer is already visible in the current frame, focuses that window."
     (unless git-dir
       (user-error "Not in a git repository"))
 
-    (let* ((target-buffer (my/pr-review--get-pr-buffer relative-path))
-           (result (my/pr-review--find-file-and-lines-in-pr
+    (let* ((target-buffer (pr-review--get-pr-buffer relative-path))
+           (result (pr-review--find-file-and-lines-in-pr
                    target-buffer relative-path start-line end-line)))
 
-      (my/pr-review--switch-to-buffer target-buffer)
+      (pr-review--switch-to-buffer target-buffer)
 
       (cond
        ;; File not found

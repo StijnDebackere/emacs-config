@@ -431,10 +431,7 @@ Returns:
 (use-package forge
   :after magit
   :bind
-  ("C-c n" . forge-dispatch)
-  :hook
-  (magit-mode . forge-pull))
-
+  ("C-c n" . forge-dispatch))
 
 ;; (use-package code-review
 ;;   :straight (:host github :repo "doomelpa/code-review")
@@ -452,27 +449,27 @@ Returns:
   :config
   (load-file (expand-file-name "~/.emacs.d/sdb/pr-review-mods.el"))
   ;; Customize your settings
-  (setq my/pr-review-main-branch-name "main")
-  (setq my/pr-review-repo-base-dir "~/repos")
+  (setq pr-review-main-branch-name "main")
+  (setq pr-review-repo-base-dir "~/repos")
   (transient-define-prefix pr-review-dispatch ()
     "Main dispatch menu for your-mode"
     ["Actions"
      ("e" "Comment" pr-review-context-comment)
-     ("d" "Ediff" my/pr-review-ediff-with-main)
+     ("d" "Ediff" pr-review-ediff-with-main)
      ("a" "Action" pr-review-context-action)
      ("R" "Refresh" pr-review-refresh)
      ("c" "Submit" pr-review-submit-review)
      ("o" "Open in browser" pr-review-open-in-default-browser)])
   :bind
-  ("C-c j" . my/pr-review-jump-to-file-in-pr)
-  ("C-c c" . my/pr-review-comment-on-region)
+  ("C-c j" . pr-review-jump-to-file-in-pr)
+  ("C-c c" . pr-review-comment-on-region)
   (:map magit-mode-map
-        ("C-c r" . my/pr-review-from-forge))
+        ("C-c r" . pr-review-from-forge))
   (:map pr-review-mode-map
         ("?" . pr-review-dispatch)
-        ("RET" . my/pr-review-visit-file)
+        ("RET" . pr-review-visit-file)
         ("e" . pr-review-context-comment)
-        ("d" . my/pr-review-ediff-with-main)
+        ("d" . pr-review-ediff-with-main)
         ("a" . pr-review-context-action)
         ("R" . pr-review-refresh)
         ("c" . pr-review-submit-review)
@@ -480,6 +477,8 @@ Returns:
 
 ;;; ediff
 (use-package ediff
+  :bind
+  ("C-c e" . ediff-files)
   :custom
   (ediff-window-setup-function 'ediff-setup-windows-plain)
   (ediff-split-window-function 'split-window-horizontally)
@@ -1231,24 +1230,29 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  '(ansi-color-faces-vector
    [default default default italic underline success warning error])
  '(ansi-color-names-vector
-   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb" "#81d4fa" "#263238"))
+   (vector "#ffffff" "#f36c60" "#8bc34a" "#fff59d" "#4dd0e1" "#b39ddb"
+           "#81d4fa" "#263238"))
  '(company-show-quick-access t nil nil "Customized with use-package company")
  '(copilot-indent-offset-warning-disable t)
  '(custom-safe-themes
-   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477" default))
+   '("afd761c9b0f52ac19764b99d7a4d871fc329f7392dfc6cd29710e8209c691477"
+     default))
  '(fci-rule-color "#ECEFF1")
  '(flycheck-checker-error-threshold 1000)
  '(hl-sexp-background-color "#efebe9")
  '(vc-annotate-background nil)
  '(vc-annotate-color-map
-   '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b")
-     (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000")
-     (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C")
-     (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f")))
+   '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f")
+     (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0")
+     (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000")
+     (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3")
+     (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722")
+     (340 . "#FFA000") (360 . "#558b2f")))
  '(vc-annotate-very-old-color nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(gptel-context-highlight-face ((t (:extend t :background "gray25"))))
  '(vc-annotate-color-map '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000") (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f"))))
