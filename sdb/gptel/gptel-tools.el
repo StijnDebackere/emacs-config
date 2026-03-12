@@ -282,5 +282,128 @@ Otherwise, replace entire file with CONTENT."
               :args '((:name "depth" :type integer :description "Max depth (default: 2)" :optional t))
               :category "project"))
 
+;;; Memory Management Integration
+
+(defun gptel-tool--check-session-size ()
+  "Check current session size and memory context size.
+Returns a plist with :session-tokens and :memory-tokens."
+  (let ((session-tokens 0)
+        (memory-tokens 0))
+    ;; Calculate session buffer tokens
+    (when (buffer-file-name)
+      (setq session-tokens (gptel-memory--estimate-tokens (buffer-string))))
+
+    ;; Calculate memory context tokens
+    (when (fboundp 'gptel-memory--context-file)
+      (let ((context-file (gptel-memory--context-file)))
+        (when (file-exists-p context-file)
+          (with-temp-buffer
+            (insert-file-contents context-file)
+            (setq memory-tokens (gptel-memory--estimate-tokens (buffer-string)))))))
+
+    (list :session-tokens session-tokens
+          :memory-tokens memory-tokens
+          :total-tokens (+ session-tokens memory-tokens))))
+
+(defun gptel-tool--maybe-prompt-summarization ()
+  "Check if summarization is needed and prompt user."
+  (when (and (fboundp 'gptel-memory-check-size)
+             gptel-memory-auto-update)
+    (let ((size-info (gptel-tool--check-session-size)))
+      (when (gptel-memory-check-size)
+        (message "Memory context approaching limit (%d tokens). Consider summarization."
+                 (plist-get size-info :memory-tokens))
+        (when (y-or-n-p "Context exceeds threshold. Summarize now? ")
+          (gptel-memory-request-summary))))))
+
+;; Hook to check memory after tool execution
+(defun gptel-tool--post-tool-check (&rest _)
+  "Check memory size after tool execution."
+  (when (and gptel-mode
+             (featurep 'gptel-memory))
+    (run-with-idle-timer 0.5 nil #'gptel-tool--maybe-prompt-summarization)))
+
+;; Add hook to gptel-post-response-functions if not already there
+(unless (member 'gptel-tool--post-tool-check gptel-post-response-functions)
+  (add-hook 'gptel-post-response-functions #'gptel-tool--post-tool-check))
+
+;; Memory status tool
+(defun gptel-tool-memory-status ()
+  "Get current memory and session status."
+  (require 'gptel-memory)
+  (let* ((size-info (gptel-tool--check-session-size))
+         (context-file (gptel-memory--context-file))
+         (threshold (* gptel-memory-max-tokens gptel-memory-summarize-threshold))
+         (memory-tokens (plist-get size-info :memory-tokens))
+         (percentage (if (> memory-tokens 0)
+                        (* 100 (/ (float memory-tokens) gptel-memory-max-tokens))
+                      0)))
+    (format "Memory Status:
+- Context file: %s
+- Session tokens: %d
+- Memory tokens: %d (%.1f%% of max)
+- Total tokens: %d
+- Threshold: %d tokens
+- Summarization %s"
+            (if (file-exists-p context-file) "exists" "not found")
+            (plist-get size-info :session-tokens)
+            memory-tokens
+            percentage
+            (plist-get size-info :total-tokens)
+            threshold
+            (if (> memory-tokens threshold) "RECOMMENDED" "not needed"))))
+
+(add-to-list 'gptel-tools
+             (gptel-make-tool
+              :function #'gptel-tool-memory-status
+              :name "memory_status"
+              :description "Check current memory and context size status"
+              :args nil
+              :category "memory"))
+
+;; Memory update tool
+(defun gptel-tool-update-memory (section content)
+  "Update a SECTION in memory context with CONTENT."
+  (require 'gptel-memory)
+  (let ((context-file (gptel-memory--context-file)))
+    (unless (file-exists-p context-file)
+      (gptel-memory-init))
+
+    (with-temp-buffer
+      (insert-file-contents context-file)
+      (goto-char (point-min))
+
+      (if (re-search-forward (format "^\\* %s" (regexp-quote section)) nil t)
+          ;; Update existing section
+          (let ((start (line-beginning-position))
+                (end (or (and (re-search-forward "^\\* " nil t)
+                             (line-beginning-position))
+                        (point-max))))
+            (delete-region start end)
+            (goto-char start)
+            (insert (format "* %s\n\n%s\n\n" section content)))
+        ;; Add new section
+        (goto-char (point-max))
+        (insert (format "\n* %s\n\n%s\n" section content)))
+
+      (write-region nil nil context-file))
+
+    ;; Check if we need summarization after update
+    (gptel-tool--maybe-prompt-summarization)
+
+    (format "Updated memory section '%s' (%d tokens)"
+            section
+            (gptel-memory--estimate-tokens content))))
+
+(add-to-list 'gptel-tools
+             (gptel-make-tool
+              :function #'gptel-tool-update-memory
+              :name "update_memory"
+              :description "Update a section in the memory context"
+              :args '((:name "section" :type string :description "Section name (e.g., 'Current Task', 'Key Decisions')")
+                      (:name "content" :type string :description "Content to add/update"))
+              :confirm t
+              :category "memory"))
+
 (provide 'gptel-tools)
 ;;; gptel-tools.el ends here
