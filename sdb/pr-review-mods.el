@@ -678,8 +678,142 @@ If the PR buffer is already visible in the current frame, focuses that window."
                   (plist-get result :closest-start) start-line))
         (pr-review-context-comment))))))
 
+;; Store pending threads to be reloaded when the PR review buffer is opened
+(defcustom pr-review-save-directory
+  (expand-file-name "pr-review-sessions" user-emacs-directory)
+  "Directory to store PR review session data."
+  :type 'directory
+  :group 'pr-review)
+
+(defun pr-review--session-file (owner repo num)
+  "Return the session file path for PR OWNER/REPO/NUM."
+  (expand-file-name
+   (format "%s_%s_%d.eld" owner repo num)
+   pr-review-save-directory))
+
+(defun pr-review-save-session ()
+  "Save pending review threads to disk."
+  (interactive)
+  (unless (derived-mode-p 'pr-review-mode)
+    (user-error "Not in a pr-review buffer"))
+  (unless (null pr-review--pending-review-threads)
+      (message "No pending review threads to save"))
+  ;; Capture buffer-local values BEFORE with-temp-file
+  (let ((pr-path pr-review--pr-path)
+        (head-oid (alist-get 'headRefOid pr-review--pr-info))
+        (threads pr-review--pending-review-threads))
+    (let ((file (pr-review--session-file
+                 (nth 0 pr-path) (nth 1 pr-path) (nth 2 pr-path))))
+      (make-directory (file-name-directory file) t)
+      (with-temp-file file
+        (let ((print-length nil)
+              (print-level nil))
+          (prin1 (list :pr-path pr-path
+                       :head-oid head-oid
+                       :pending-threads threads
+                       :timestamp (format-time-string "%Y-%m-%dT%H:%M:%S"))
+                 (current-buffer))))
+      (message "Saved %d pending review thread(s)"
+               (length pr-review--pending-review-threads)))))
+
+
+(defun pr-review-load-session ()
+  "Load pending review threads from disk."
+  (interactive)
+  (unless (derived-mode-p 'pr-review-mode)
+    (user-error "Not in a pr-review buffer"))
+
+  (let* ((pr-path pr-review--pr-path)
+         (file (and pr-path
+                    (pr-review--session-file
+                     (nth 0 pr-path)
+                     (nth 1 pr-path)
+                     (nth 2 pr-path)))))
+    (unless file
+      (user-error "Could not determine PR path from buffer name"))
+
+    (unless (file-exists-p file)
+      (user-error "No saved session found"))
+
+    (let* ((data (with-temp-buffer
+                   (insert-file-contents file)
+                   (read (current-buffer))))
+           (saved-head (plist-get data :head-oid))
+           (current-head (alist-get 'headRefOid pr-review--pr-info))
+           (threads (plist-get data :pending-threads)))
+      ;; Warn if PR has changed
+      (when (and saved-head current-head
+                 (not (string= saved-head current-head)))
+        (unless (yes-or-no-p
+                 "PR head has changed since session was saved. Load anyway? ")
+          (user-error "Session load cancelled")))
+      ;; Merge or replace existing threads
+      (if (and pr-review--pending-review-threads
+               (not (yes-or-no-p "Replace existing pending threads? ")))
+          (setq-local pr-review--pending-review-threads
+                      (append pr-review--pending-review-threads threads))
+        (setq-local pr-review--pending-review-threads threads))
+      ;; Re-render threads in diff
+      (let ((inhibit-read-only t))
+        (mapc (lambda (th)
+                (pr-review--insert-in-diff-pending-review-thread th 'allow-fallback))
+              threads))
+      (message "Loaded %d pending review thread(s)" (length threads)))))
+
+;; (defun pr-review--prompt-load-session ()
+;;   "Prompt to load saved session if available when PR buffer is opened."
+;;   (message "Checking for saved session file %s in %s" (pr-review--session-file) pr-review--pr-path)
+;;   (when (derived-mode-p 'pr-review-mode)
+;;     (when-let* ((file (pr-review--session-file))
+;;                 ((file-exists-p file)))
+;;       (when (yes-or-no-p "Saved session found. Load pending review threads? ")
+;;         (condition-case err
+;;             (pr-review-load-session)
+;;           (error (message "Failed to load session: %s" err)))))))
+
+;; ;; Add to pr-review-mode-hook instead
+;; (defun pr-review--prompt-load-session-hook ()
+;;   "Prompt to load session when pr-review buffer is initialized."
+;;   (when pr-review--pr-path  ; Only run if pr-path is set
+;;     (run-with-idle-timer 0.1 nil #'pr-review--prompt-load-session)))
+
+;; (add-hook 'pr-review-mode-hook #'pr-review--prompt-load-session-hook)
+
+(defun pr-review--cleanup-session-on-kill ()
+  "Delete session file when closing PR buffer if no pending threads remain."
+  (when (derived-mode-p 'pr-review-mode)
+    (when-let* ((pr-path pr-review--pr-path)
+                (session-file (pr-review--session-file
+                               (nth 0 pr-path)
+                               (nth 1 pr-path)
+                               (nth 2 pr-path)))
+                ((file-exists-p session-file))
+                ((null pr-review--pending-review-threads)))
+      (condition-case err
+          (progn
+            (delete-file file)
+            (message "Cleaned up session file for %s"
+                     (buffer-name)))
+        (error (message "Failed to cleanup session file: %s" err))))))
+
+(defun pr-review--save-all-sessions-on-exit ()
+  "Save all pr-review sessions before Emacs exits."
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (when (and (derived-mode-p 'pr-review-mode)
+                 (not (null pr-review--pending-review-threads)))
+        (condition-case err
+            (pr-review-save-session)
+          (error (message "Failed to save PR session for %s: %s"
+                          (buffer-name) err))))))
+  t)  ; Always allow exit
+
+(add-hook 'kill-buffer-hook #'pr-review--save-all-sessions-on-exit)
+(add-hook 'kill-buffer-hook #'pr-review--cleanup-session-on-kill)
+(add-hook 'kill-emacs-query-functions #'pr-review--save-all-sessions-on-exit)
+
 ;; Helper function to open pr-review from magit with forge integration
-(defun my/pr-review-from-forge ()
+(defun pr-review-from-forge ()
   "Open pr-review for the PR at point in magit/forge.
 This captures the git directory automatically."
   (interactive)
@@ -688,10 +822,38 @@ This captures the git directory automatically."
 
   (if-let* ((target (forge--browse-target))
             (url (if (stringp target) target (forge-get-url target)))
-            (rev-url (pr-review-url-parse url)))
-      (pr-review url)
+            (pr-path (pr-review-url-parse url))
+            (session-file (pr-review--session-file
+                           (nth 0 pr-path)
+                           (nth 1 pr-path)
+                           (nth 2 pr-path))))
+      (progn
+        ;; Check if session exists and prompt to load
+        (when (file-exists-p session-file)
+          (when (yes-or-no-p "Saved session found. Load pending review threads after opening? ")
+            ;; Store session file to load after buffer opens
+            (setq pr-review--pending-session-file session-file)))
+        (pr-review url))
     (user-error "No PR to review at point")))
 
+(defvar pr-review--pending-session-file nil
+  "Session file to load after PR buffer is opened.")
+
+(defun pr-review--load-pending-session-hook ()
+  "Load pending session file if one was set."
+  (when pr-review--pending-session-file
+    (let ((file pr-review--pending-session-file))
+      (setq pr-review--pending-session-file nil)
+      (run-with-idle-timer 0.2 nil
+        (lambda ()
+          (when (buffer-live-p (current-buffer))
+            (with-current-buffer (current-buffer)
+              (when (derived-mode-p 'pr-review-mode)
+                (condition-case err
+                    (pr-review-load-session)
+                  (error (message "Failed to load session: %s" err)))))))))))
+
+(add-hook 'pr-review-mode-hook #'pr-review--load-pending-session-hook)
 
 (provide 'pr-review-mods)
 ;;; pr-review-mods.el ends here
