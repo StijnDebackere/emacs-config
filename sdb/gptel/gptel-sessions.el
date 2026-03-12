@@ -117,8 +117,15 @@ With prefix ARG, behave as normal gptel (no session file)."
              (string-match-p "/\\.gptel/session-.*\\.org$" (buffer-file-name)))
         ;; Already in a session, just ensure gptel-mode
         (unless gptel-mode (gptel-mode 1))
-      ;; Start new or resume session
-      (call-interactively #'gptel-session-start))))
+      ;; Check for existing sessions and prompt to resume
+      (let* ((session-dir (gptel-session--get-dir))
+             (sessions (directory-files session-dir nil "^session-.*\\.org$")))
+        (if (and sessions
+                 (y-or-n-p (format "Found %d existing session(s). Resume one? "
+                                   (length sessions))))
+            (gptel-session-resume)
+          ;; Start new session
+          (gptel-session-start))))))
 
 ;;; Auto-save Hook
 
