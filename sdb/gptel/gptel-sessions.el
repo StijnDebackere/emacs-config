@@ -61,7 +61,7 @@ If NAME is provided, use it as the filename, otherwise generate one."
         (insert (format "#+TITLE: GPtel Session - %s\n" project-name))
         (insert (format "#+DATE: %s\n" (format-time-string "%Y-%m-%d %H:%M")))
         (insert (format "#+PROPERTY: PROJECT_ROOT %s\n\n" project-root))
-        (insert "* Session\n\n"))
+        (insert (alist-get 'org-mode gptel-prompt-prefix-alist)))
 
       (goto-char (point-max))
       (message "GPtel session: %s (working dir: %s)" session-name project-root)

@@ -148,6 +148,13 @@ Returns:
 
 ;; We start in the home directory
 (cd "~")
+;; ensure that the `default-directory' matches the directory of the opened file
+(add-hook 'find-file-hook
+          (lambda ()
+            (when (buffer-file-name)
+              (setq default-directory
+                    (file-name-directory (buffer-file-name))))))
+
 
 ;; UTF-8 please
 (setq locale-coding-system 'utf-8) ; pretty
@@ -266,8 +273,9 @@ Returns:
   :ensure t
   :config
   (require 'gptel-integrations)
-  (load-file (expand-file-name "sdb/gptel/gptel-tools.el"))
-  (load-file (expand-file-name "sdb/gptel/gptel-sessions.el"))
+  (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-tools.el"))
+  (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-sessions.el"))
+  (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-memory.el"))
   ;; Register GitHub Copilot backend
   (setq gptel-backend (gptel-make-gh-copilot "Copilot")
         gptel-model 'claude-sonnet-4.5
