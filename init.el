@@ -253,28 +253,62 @@ Returns:
   (popper-mode +1)
   (popper-echo-mode +1))
 
+
+;; gptel
+;; - for a given dbt model `sql' file:
+;;   - add the sql file to the context
+;;   - find the sql files for all direct `refs' and add them to the context
+;;   - find the corresponding entries in the `yml' files and add them to the context
+;; - Conserve context over sessions: save file with context and load it in the next session?
+
 (use-package gptel
   :straight (:host github :repo "karthink/gptel" :files ("*.el" "test"))
   :ensure t
   :config
+  (require 'gptel-integrations)
+  (load-file (expand-file-name "sdb/gptel/gptel-tools.el"))
+  (load-file (expand-file-name "sdb/gptel/gptel-sessions.el"))
   ;; Register GitHub Copilot backend
   (setq gptel-backend (gptel-make-gh-copilot "Copilot")
         gptel-model 'claude-sonnet-4.5
         gptel-use-curl t
+        gptel-context-highlight-method 'overlay
+        gptel-default-mode 'org-mode
         ;; TODO: update `gptel' such that PDFs work as media, see here
         ;; https://github.com/karthink/gptel/issues/929
-        gptel-track-media t)
+        gptel-track-media t
+        gptel-use-tools t)
+  (add-to-list 'gptel-prompt-prefix-alist
+               `(org-mode . ,(format "* sdb \n")))
+  (add-to-list 'gptel-response-prefix-alist
+               `(org-mode . ,(format "* model \n")))
+  :hook
   ;; Ensure we enable sending media if the model allows it
-  (add-hook 'gptel-mode-hook
-            (lambda ()
-              (when (and gptel-model
-                         (gptel--model-capable-p 'media))
-                (setq-local gptel-track-media t))))
-  (setq gptel-context-highlight-method 'overlay)
+  (gptel-mode . (lambda ()
+                  (when (and gptel-model
+                             (gptel--model-capable-p 'media))
+                    (setq-local gptel-track-media t))))
   :bind
   ("C-c p" . gptel)
   ("C-c a" . gptel-add)
-  ("C-c RET" . gptel-rewrite))
+  ("C-c RET" . gptel-send)
+  ("C-c t s" . gptel-tool-status)
+  ("C-c m" . gptel-menu)
+  ("C-c C-r" . gptel-rewrite))
+
+
+(use-package mcp
+  :straight (:host github :repo "lizqwerscott/mcp.el" :files ("*.el" "*.org"))
+  :ensure t
+  :after gptel
+  ;; :custom (mcp-hub-servers
+  ;;          `(("filesystem" . (:command "npx"
+  ;;                             :args ("-y" "@modelcontextprotocol/server-filesystem")
+  ;;                             :roots ("/home/lizqwer/MyProject/")))
+  ;;            ("fetch" . (:command "uvx" :args ("mcp-server-fetch")))))
+  :config (require 'mcp-hub))
+  ;; :hook (after-init . mcp-hub-start-all-server))
+
 
 ;;; automatic whitespace removal
 (use-package ws-butler
