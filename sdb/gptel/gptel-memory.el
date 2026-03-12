@@ -165,51 +165,303 @@ Format your response EXACTLY as:
     
     ;; Create memory directory
     (gptel-memory--get-memory-dir)
-    (gptel-memory--get-archive-dir)
+    (gptel-memory--get-archive-dir)))
     
-    ;; Create context.org if doesn't exist
-    (unless (file-exists-p context-file)
-      (with-temp-file context-file
-        (insert (format gptel-memory-context-template
-                       project-name
-                       timestamp
-                       project-root))))
+;;; Session Analysis and Context Extraction
+
+(defconst gptel-memory-extraction-prompt
+  "Analyze this gptel session and extract key information:
+
+%s
+
+Extract the following in a structured format:
+
+* Current Task
+What is the main task or goal discussed in this session?
+
+* Recent Changes
+What specific changes were made (code, files, configurations)?
+
+* Key Decisions
+What important decisions or conclusions were reached?
+
+* Critical Files
+Which files were discussed or modified?
+
+* Known Issues
+Were any problems, bugs, or issues identified?
+
+* Architecture Notes
+Were there any architectural insights, patterns, or design decisions?
+
+Format your response EXACTLY as shown above with these section headings."
+  "Prompt template for extracting key points from session.")
+
+(defun gptel-memory--extract-session-content (session-file)
+  "Extract and clean session content from SESSION-FILE for analysis."
+  (with-temp-buffer
+    (insert-file-contents session-file)
+    (goto-char (point-min))
     
-    ;; Create index.org if doesn't exist
-    (unless (file-exists-p index-file)
-      (with-temp-file index-file
-        (insert (format gptel-memory-index-template timestamp))))
+    ;; Skip properties and loaded context
+    (when (re-search-forward "^#\\+PROPERTY:" nil t)
+      (forward-line 1)
+      (while (looking-at "^#\\+")
+        (forward-line 1)))
     
-    (message "Memory initialized at %s" memory-dir)))
+    ;; Skip the "Loaded Context" section if present
+    (when (re-search-forward "^\\* Loaded Context" nil t)
+      (when (re-search-forward "^\\* " nil t)
+        (forward-line 0)))
+    
+    ;; Get everything from here to end
+    (buffer-substring-no-properties (point) (point-max))))
+
+(defun gptel-memory--request-session-analysis (session-file callback)
+  "Request AI analysis of SESSION-FILE and call CALLBACK with results."
+  (let* ((session-content (gptel-memory--extract-session-content session-file))
+         (prompt (format gptel-memory-extraction-prompt session-content))
+         (analysis-buffer (get-buffer-create "*gptel-memory-analysis*")))
+    
+    (with-current-buffer analysis-buffer
+      (erase-buffer)
+      (insert prompt)
+      (goto-char (point-max))
+      (org-mode)
+      (gptel-mode 1)
+      
+      ;; Send request
+      (gptel-request
+          prompt
+       :buffer analysis-buffer
+       :callback
+       (lambda (response info)
+         (when response
+           (funcall callback response)))))))
+
+(defun gptel-memory--parse-analysis (analysis)
+  "Parse ANALYSIS response into structured sections.
+Returns an alist of (section-name . content) pairs."
+  (let ((sections '()))
+    (with-temp-buffer
+      (insert analysis)
+      (goto-char (point-min))
+      
+      ;; Parse each section
+      (while (re-search-forward "^\\* \\(.*\\)$" nil t)
+        (let* ((section-name (match-string 1))
+               (start (line-end-position))
+               (end (or (and (save-excursion
+                              (re-search-forward "^\\* " nil t))
+                            (match-beginning 0))
+                       (point-max)))
+               (content (string-trim (buffer-substring-no-properties start end))))
+          (when (> (length content) 0)
+            (push (cons section-name content) sections)))))
+    
+    (nreverse sections)))
+
+(defun gptel-memory--update-context-section (section-name content)
+  "Update SECTION-NAME in context.org with CONTENT."
+  (let ((context-file (gptel-memory--context-file)))
+    (when (file-exists-p context-file)
+      (with-temp-buffer
+        (insert-file-contents context-file)
+        (goto-char (point-min))
+        
+        ;; Find the section
+        (if (re-search-forward (format "^\\*\\* %s$" (regexp-quote section-name)) nil t)
+            (progn
+              ;; Found section, replace its content
+              (forward-line 1)
+              (let ((start (point))
+                    (end (or (and (re-search-forward "^\\*\\*\\( \\|$\\)" nil t)
+                                 (line-beginning-position))
+                            (and (re-search-forward "^\\* " nil t)
+                                 (line-beginning-position))
+                            (point-max))))
+                (delete-region start end)
+                (goto-char start)
+                (insert content "\n\n")))
+          ;; Section not found, try to add it to the right parent section
+          (gptel-memory--add-to-parent-section section-name content))
+        
+        (write-region nil nil context-file)))))
+
+(defun gptel-memory--add-to-parent-section (section-name content)
+  "Add SECTION-NAME with CONTENT to appropriate parent section."
+  (let ((parent-mapping '(("Current Task" . "Active Work Context")
+                         ("Recent Changes" . "Active Work Context")
+                         ("Known Issues" . "Active Work Context")
+                         ("Critical Files" . "Code Context")
+                         ("Architecture Notes" . "Code Context")
+                         ("Dependencies" . "Code Context")
+                         ("Key Decisions" . "Project Overview"))))
+    (let ((parent (cdr (assoc section-name parent-mapping))))
+      (when parent
+        (goto-char (point-min))
+        (when (re-search-forward (format "^\\* %s$" (regexp-quote parent)) nil t)
+          ;; Find end of parent section
+          (if (re-search-forward "^\\* " nil t)
+              (forward-line 0)
+            (goto-char (point-max)))
+          ;; Insert new subsection
+          (insert (format "\n** %s\n%s\n" section-name content)))))))
+
+(defun gptel-memory--update-conversation-history (session-file timestamp)
+  "Add SESSION-FILE link to conversation history with TIMESTAMP."
+  (let ((context-file (gptel-memory--context-file))
+        (session-name (file-name-nondirectory session-file)))
+    (with-temp-buffer
+      (insert-file-contents context-file)
+      
+      ;; Update conversation history section
+      (goto-char (point-min))
+      (if (re-search-forward "^\\* Conversation History (Recent)" nil t)
+          (progn
+            (forward-line 1)
+            ;; Add entry at the top of conversation history
+            (insert (format "\n** %s - [[file:../%s][%s]]\n"
+                           timestamp session-name session-name))
+            
+            ;; Limit to last 10 sessions
+            (let ((count 0))
+              (while (and (re-search-forward "^\\*\\* " nil t)
+                         (< count 10))
+                (setq count (1+ count)))
+              (when (re-search-forward "^\\*\\* " nil t)
+                (delete-region (line-beginning-position)
+                              (or (and (re-search-forward "^\\* " nil t)
+                                      (line-beginning-position))
+                                  (point-max))))))
+        ;; Create conversation history section if missing
+        (goto-char (point-max))
+        (insert (format "\n* Conversation History (Recent)\n\n** %s - [[file:../%s][%s]]\n"
+                       timestamp session-name session-name)))
+      
+      (write-region nil nil context-file))))
+
+(defun gptel-memory--update-token-count ()
+  "Update the CONTEXT_TOKENS property in context.org."
+  (let ((context-file (gptel-memory--context-file)))
+    (with-temp-buffer
+      (insert-file-contents context-file)
+      (let ((new-tokens (gptel-memory--estimate-tokens (buffer-string))))
+        (goto-char (point-min))
+        (if (re-search-forward "^#\\+PROPERTY: CONTEXT_TOKENS \\([0-9]+\\)" nil t)
+            (replace-match (format "#+PROPERTY: CONTEXT_TOKENS %d" new-tokens))
+          ;; Add property if missing
+          (goto-char (point-min))
+          (when (re-search-forward "^#\\+PROPERTY: PROJECT_ROOT" nil t)
+            (forward-line 1)
+            (insert (format "#+PROPERTY: CONTEXT_TOKENS %d\n" new-tokens))))
+        (write-region nil nil context-file)
+        new-tokens))))
+
+(defun gptel-memory--update-index-statistics ()
+  "Update statistics in index.org file."
+  (let ((index-file (gptel-memory--index-file))
+        (context-file (gptel-memory--context-file)))
+    (when (file-exists-p index-file)
+      (with-temp-buffer
+        (insert-file-contents index-file)
+        
+        ;; Update active context size
+        (goto-char (point-min))
+        (when (and (file-exists-p context-file)
+                  (re-search-forward "^- Active context size: \\([0-9]+\\) tokens" nil t))
+          (let ((tokens (with-temp-buffer
+                         (insert-file-contents context-file)
+                         (gptel-memory--estimate-tokens (buffer-string)))))
+            (replace-match (format "- Active context size: %d tokens" tokens))))
+        
+        (write-region nil nil index-file)))))
+
+(defun gptel-memory--apply-analysis (analysis session-file)
+  "Apply parsed ANALYSIS to context.org for SESSION-FILE."
+  (let ((sections (gptel-memory--parse-analysis analysis))
+        (timestamp (format-time-string "%Y-%m-%d %H:%M")))
+    
+    ;; Update each section
+    (dolist (section sections)
+      (gptel-memory--update-context-section (car section) (cdr section)))
+    
+    ;; Update conversation history
+    (gptel-memory--update-conversation-history session-file timestamp)
+    
+    ;; Update token count
+    (let ((tokens (gptel-memory--update-token-count)))
+      (message "Updated context.org (%d tokens)" tokens))
+    
+    ;; Update index statistics
+    (gptel-memory--update-index-statistics)))
+
+;;; Updated session update function
+
+(defun gptel-memory-update-session (session-file)
+  "Update memory after session ends with AI-extracted key points."
+  (interactive (list (buffer-file-name)))
+  (when (and gptel-memory-auto-update session-file)
+    (let* ((context-file (gptel-memory--context-file))
+           (index-file (gptel-memory--index-file))
+           (session-name (file-name-nondirectory session-file))
+           (timestamp (format-time-string "%Y-%m-%d")))
+
+      ;; Update index.org with new session
+      (when (file-exists-p index-file)
+        (with-temp-buffer
+          (insert-file-contents index-file)
+          (goto-char (point-min))
+          (when (re-search-forward "^\\* Sessions by Topic" nil t)
+            (forward-line 1)
+            (insert (format "** [[file:../%s][%s]]: Session\n"
+                           session-name timestamp)))
+
+          ;; Update statistics
+          (goto-char (point-min))
+          (when (re-search-forward "^- Total sessions: \\([0-9]+\\)" nil t)
+            (let ((count (string-to-number (match-string 1))))
+              (replace-match (format "- Total sessions: %d" (1+ count)))))
+
+          (write-region nil nil index-file)))
+
+      ;; Request AI analysis and update context
+      (message "Analyzing session and updating context...")
+      (gptel-memory--request-session-analysis
+       session-file
+       (lambda (analysis)
+         (gptel-memory--apply-analysis analysis session-file)
+
+         ;; Check if summarization needed after update
+         (when (gptel-memory-check-size)
+           (when (y-or-n-p "Context exceeds threshold. Summarize now? ")
+             (gptel-memory-request-summary)))))
+
+      (message "Memory update initiated..."))))
 
 (defun gptel-memory-load ()
-  "Load context when starting session."
+  "Load context.org into current session buffer."
   (interactive)
   (let ((context-file (gptel-memory--context-file)))
     (if (file-exists-p context-file)
-        (with-temp-buffer
-          (insert-file-contents context-file)
-          (let ((context (buffer-string)))
-            ;; Insert context at beginning of session
-            (save-excursion
-              (goto-char (point-min))
-              ;; Find Session heading or create one
-              (if (re-search-forward "^\\* Session" nil t)
-                  (progn
-                    (forward-line 0)
-                    (insert "\n* Loaded Context\n\n")
-                    (insert "#+begin_quote\n")
-                    (insert context)
-                    (insert "\n#+end_quote\n\n"))
-                ;; No session heading, insert after properties
-                (goto-char (point-max))
-                (insert "\n* Loaded Context\n\n")
-                (insert "#+begin_quote\n")
-                (insert context)
-                (insert "\n#+end_quote\n\n")))
-            (message "Loaded context (%d tokens)" 
-                    (gptel-memory--estimate-tokens context))
-            context))
+        (let ((context (with-temp-buffer
+                        (insert-file-contents context-file)
+                        (buffer-string))))
+          (save-excursion
+            (goto-char (point-min))
+            ;; Skip properties
+            (when (re-search-forward "^#\\+PROPERTY:" nil t)
+              (while (looking-at "^#\\+")
+                (forward-line 1))
+              (forward-line 1))
+            ;; Insert loaded context section
+            (insert "\n* Loaded Context\n\n")
+            (insert "#+begin_quote\n")
+            (insert context)
+            (insert "\n#+end_quote\n\n"))
+          (message "Loaded context (%d tokens)"
+                   (gptel-memory--estimate-tokens context))
+          context)
       (message "No context file found. Run M-x gptel-memory-init")
       nil)))
 
@@ -225,66 +477,33 @@ Format your response EXACTLY as:
             (message "Context size: %d tokens (threshold: %d)" tokens threshold)
             t))))))
 
-(defun gptel-memory-update-session (session-file)
-  "Update memory after session ends."
-  (interactive (list (buffer-file-name)))
-  (when (and gptel-memory-auto-update session-file)
-    (let* ((context-file (gptel-memory--context-file))
-           (index-file (gptel-memory--index-file))
-           (session-name (file-name-nondirectory session-file))
-           (timestamp (format-time-string "%Y-%m-%d")))
-      
-      ;; Update index.org with new session
-      (when (file-exists-p index-file)
-        (with-temp-buffer
-          (insert-file-contents index-file)
-          (goto-char (point-min))
-          (when (re-search-forward "^\\* Sessions by Topic" nil t)
-            (forward-line 1)
-            (insert (format "** [[file:../../%s][%s]]: Session\n" 
-                           session-name timestamp)))
-          
-          ;; Update statistics
-          (goto-char (point-min))
-          (when (re-search-forward "^- Total sessions: \\([0-9]+\\)" nil t)
-            (let ((count (string-to-number (match-string 1))))
-              (replace-match (format "- Total sessions: %d" (1+ count)))))
-          
-          (write-region nil nil index-file)))
-      
-      ;; Check if summarization needed
-      (when (gptel-memory-check-size)
-        (when (y-or-n-p "Context exceeds threshold. Summarize now? ")
-          (gptel-memory-request-summary)))
-      
-      (message "Updated memory index"))))
-
 (defun gptel-memory-request-summary ()
   "Send summarization request to model."
   (interactive)
   (let* ((context-file (gptel-memory--context-file))
          (context-content (with-temp-buffer
-                           (insert-file-contents context-file)
-                           (buffer-string)))
+                            (insert-file-contents context-file)
+                            (buffer-string)))
          (prompt (format gptel-memory-summarization-prompt context-content))
          (summary-buffer (get-buffer-create "*gptel-memory-summary*")))
-    
+
     ;; Create summary request buffer
     (with-current-buffer summary-buffer
       (erase-buffer)
       (insert prompt)
-      (goto-char (point-min))
+      (goto-char (point-max))
       (org-mode)
       (gptel-mode 1)
       (message "Requesting summary from model...")
-      
+
       ;; Send request
       (gptel-request
-       :buffer summary-buffer
-       :callback
-       (lambda (response info)
-         (when response
-           (gptel-memory-review-summary response)))))
+          prompt
+        :buffer summary-buffer
+        :callback
+        (lambda (response info)
+          (when response
+            (gptel-memory-review-summary response)))))
     
     (display-buffer summary-buffer)))
 
@@ -431,6 +650,18 @@ REQUESTS is a list of (type . identifier) pairs."
     (gptel-memory-load)))
 
 (add-hook 'gptel-mode-hook #'gptel-memory--auto-load-hook)
+
+;;; Auto-save hook on session close
+
+(defun gptel-memory--auto-save-on-kill ()
+  "Automatically update memory when closing a session buffer."
+  (when (and gptel-memory-auto-update
+             gptel-mode
+             (buffer-file-name)
+             (string-match-p "/\\.gptel/session-" (buffer-file-name)))
+    (gptel-memory-update-session (buffer-file-name))))
+
+(add-hook 'kill-buffer-hook #'gptel-memory--auto-save-on-kill)
 
 ;;; Response parsing hook
 
