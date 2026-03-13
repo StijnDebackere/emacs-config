@@ -67,6 +67,7 @@ If TOPIC is provided, return topic-specific index file."
   "Get current session topic from buffer-local variable or file property."
   (or (bound-and-true-p gptel-session-current-topic)
       (and (buffer-file-name)
+           (derived-mode-p 'org-mode)
            (org-entry-get nil "TOPIC" t))))
 
 (defun gptel-memory--estimate-tokens (text)
@@ -189,17 +190,6 @@ If TOPIC is provided, initialize topic-specific memory."
     (message "Initialized memory%s at %s"
              (if topic (format " for topic '%s'" topic) "")
              memory-dir)))
-                               (not (string= (projectile-project-name) "-"))
-                               (projectile-project-name))
-                          (file-name-nondirectory
-                           (directory-file-name (projectile-project-root)))
-                          "default"))
-         (project-root (or (projectile-project-root) default-directory))
-         (timestamp (format-time-string "%Y-%m-%d %H:%M")))
-
-    ;; Create memory directory
-    (gptel-memory--get-memory-dir)
-    (gptel-memory--get-archive-dir)))
 
 ;;; Session Analysis and Context Extraction
 

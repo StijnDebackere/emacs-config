@@ -276,6 +276,12 @@ Returns:
   (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-tools.el"))
   (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-sessions.el"))
   (load-file (expand-file-name "~/.emacs.d/sdb/gptel/gptel-memory.el"))
+  ;; Register Anthropic backend
+  (gptel-make-anthropic "Claude"
+    :stream t
+    :key (lambda ()
+           (auth-source-pick-first-password
+            :host "api.anthropic.com")))
   ;; Register GitHub Copilot backend
   (setq gptel-backend (gptel-make-gh-copilot "Copilot")
         gptel-model 'claude-sonnet-4.5
