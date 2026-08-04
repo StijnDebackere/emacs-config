@@ -148,6 +148,13 @@ Returns:
 
 ;; We start in the home directory
 (cd "~")
+;; ensure that the `default-directory' matches the directory of the opened file
+(add-hook 'find-file-hook
+          (lambda ()
+            (when (buffer-file-name)
+              (setq default-directory
+                    (file-name-directory (buffer-file-name))))))
+
 
 ;; UTF-8 please
 (setq locale-coding-system 'utf-8) ; pretty
