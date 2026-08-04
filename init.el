@@ -1120,6 +1120,7 @@ point reaches the beginning or end of the buffer, stop there."
 (setq gc-cons-threshold 64000000)
 
 (use-package lsp-mode
+  :straight t
   ;; do not show yas when lsp-mode enabled
   ;; :diminish (yas-minor-mode . "")
   ;; :after (yasnippet)
@@ -1151,6 +1152,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;; to make this work, run npm install -g pyright
 (use-package lsp-pyright
+  :straight t
   :init
   ;; see https://github.com/emacs-lsp/lsp-pyright/issues/66#issuecomment-1144136538
   ;; this will start a separate process for each lsp
@@ -1200,6 +1202,7 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "C-c C-j" 'counsel-imenu)
 
 (use-package lsp-ui
+  :straight t
   :commands lsp-ui-mode
   :bind
   ("s->" . lsp-ui-find-next-reference)
