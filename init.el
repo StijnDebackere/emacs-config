@@ -516,6 +516,7 @@ Returns:
   ;; Customize your settings
   (setq pr-review-main-branch-name "main")
   (setq pr-review-repo-base-dir "~/repos")
+  (setq pr-review-ghub-auth-name 'forge)
   (transient-define-prefix pr-review-dispatch ()
     "Main dispatch menu for your-mode"
     ["Actions"
