@@ -940,27 +940,22 @@ point reaches the beginning or end of the buffer, stop there."
     (add-to-list 'major-mode-remap-alist mapping))
 
   :config
-  (mp-setup-install-grammars)
-  ;; Do not forget to customize Combobulate to your liking:
-  ;;
-  ;;  M-x customize-group RET combobulate RET
-  ;;
-  ;; (use-package combobulate
-  ;;   ;; Optional, but recommended.
-  ;;   ;;
-  ;;   ;; You can manually enable Combobulate with `M-x
-  ;;   ;; combobulate-mode'.
-  ;;   :bind
-  ;;   ("C-c o o" . combobulate)
-  ;;   :hook ((python-ts-mode . combobulate-mode)
-  ;;          (js-ts-mode . combobulate-mode)
-  ;;          (css-ts-mode . combobulate-mode)
-  ;;          (yaml-ts-mode . combobulate-mode)
-  ;;          (typescript-ts-mode . combobulate-mode)
-  ;;          (tsx-ts-mode . combobulate-mode))
-  ;;   ;; Amend this to the directory where you keep Combobulate's source
-  ;;   ;; code.  ;;   :load-path ("~/Repositories/combobulate/")))
-  )
+  (mp-setup-install-grammars))
+
+;; Do not forget to customize Combobulate to your liking:
+;;
+;;  M-x customize-group RET combobulate RET
+;;
+(use-package combobulate
+  :straight (:host github :repo "mickeynp/combobulate")
+  :preface
+  (setq combobulate-key-prefix "C-c o")
+  :hook ((python-ts-mode . combobulate-mode)
+         (js-ts-mode . combobulate-mode)
+         (css-ts-mode . combobulate-mode)
+         (yaml-ts-mode . combobulate-mode)
+         (typescript-ts-mode . combobulate-mode)
+         (tsx-ts-mode . combobulate-mode)))
 
 ;;;; multiple-cursors
 (use-package multiple-cursors
@@ -1316,7 +1311,8 @@ Hook this function into `TeX-after-compilation-finished-functions'."
      (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3")
      (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722")
      (340 . "#FFA000") (360 . "#558b2f")))
- '(vc-annotate-very-old-color nil))
+ '(vc-annotate-very-old-color nil)
+ '(warning-suppress-log-types '((treesit))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
