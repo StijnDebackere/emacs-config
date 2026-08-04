@@ -268,53 +268,9 @@ Returns:
   (popper-echo-mode +1))
 
 
-;; gptel
-;; - for a given dbt model `sql' file:
-;;   - add the sql file to the context
-;;   - find the sql files for all direct `refs' and add them to the context
-;;   - find the corresponding entries in the `yml' files and add them to the context
-;; - Conserve context over sessions: save file with context and load it in the next session?
-
-;; (use-package gptel
-;;   :straight (:host github :repo "karthink/gptel" :files ("*.el" "test"))
-;;   :ensure t
-;;   :config
-;;   (require 'gptel-integrations)
-;;   (load-file (expand-file-name "sdb/gptel/gptel-tools.el"))
-;;   (load-file (expand-file-name "sdb/gptel/gptel-sessions.el"))
-;;   ;; Register GitHub Copilot backend
-;;   (setq gptel-backend (gptel-make-gh-copilot "Copilot")
-;;         gptel-model 'claude-sonnet-4.5
-;;         gptel-use-curl t
-;;         gptel-context-highlight-method 'overlay
-;;         gptel-default-mode 'org-mode
-;;         ;; TODO: update `gptel' such that PDFs work as media, see here
-;;         ;; https://github.com/karthink/gptel/issues/929
-;;         gptel-track-media t
-;;         gptel-use-tools t)
-;;   (add-to-list 'gptel-prompt-prefix-alist
-;;                `(org-mode . ,(format "* sdb \n")))
-;;   (add-to-list 'gptel-response-prefix-alist
-;;                `(org-mode . ,(format "* model \n")))
-;;   :hook
-;;   ;; Ensure we enable sending media if the model allows it
-;;   (gptel-mode . (lambda ()
-;;                   (when (and gptel-model
-;;                              (gptel--model-capable-p 'media))
-;;                     (setq-local gptel-track-media t))))
-;;   :bind
-;;   ("C-c p" . gptel)
-;;   ("C-c a" . gptel-add)
-;;   ("C-c RET" . gptel-send)
-;;   ("C-c t s" . gptel-tool-status)
-;;   ("C-c m" . gptel-menu)
-;;   ("C-c C-r" . gptel-rewrite))
-
-
 (use-package mcp
   :straight (:host github :repo "lizqwerscott/mcp.el" :files ("*.el" "*.org"))
   :ensure t
-  :after gptel
   ;; :custom (mcp-hub-servers
   ;;          `(("filesystem" . (:command "npx"
   ;;                             :args ("-y" "@modelcontextprotocol/server-filesystem")
@@ -1320,5 +1276,4 @@ Hook this function into `TeX-after-compilation-finished-functions'."
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(gptel-context-highlight-face ((t (:extend t :background "gray25"))))
  '(vc-annotate-color-map '((20 . "#B71C1C") (40 . "#FF5722") (60 . "#FFA000") (80 . "#558b2f") (100 . "#00796b") (120 . "#2196f3") (140 . "#4527A0") (160 . "#B71C1C") (180 . "#FF5722") (200 . "#FFA000") (220 . "#558b2f") (240 . "#00796b") (260 . "#2196f3") (280 . "#4527A0") (300 . "#B71C1C") (320 . "#FF5722") (340 . "#FFA000") (360 . "#558b2f"))))
