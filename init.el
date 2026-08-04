@@ -337,18 +337,35 @@ Returns:
   (super-save-mode +1))
 
 
-;;; smartparens
-(use-package smartparens
-  :diminish smartparens-mode
-  :init
-  (sp-use-smartparens-bindings)
+;;; electric-pair-mode
+;; native replacement for smartparens' auto-pairing (incl. wrapping an
+;; active region when typing an opening delimiter, given `delete-selection-mode'
+;; is also on above)
+(use-package elec-pair
+  :ensure nil
   :config
-  (require 'smartparens-config)
-  (smartparens-global-mode)
-  ;; prefer this command as backward-kill-word
-  (unbind-key "M-<backspace>" smartparens-mode-map)
+  (electric-pair-mode 1)
   :custom
-  (sp-show-pair-from-inside nil))
+  (electric-pair-preserve-balance t))
+
+;;; sexp navigation
+;; explicit bindings mirroring the old `sp-smartparens-bindings' scheme,
+;; using Emacs's built-in sexp commands. Most of these already match the
+;; vanilla defaults; bound explicitly here so they don't depend on that.
+;; Keys that had no native equivalent (unwrap, slurp/barf, splice, symbol
+;; nav) are intentionally left alone: C-M-a/C-M-e/C-M-w/C-<right>/C-<left>/
+;; C-]/C-S-<backspace> revert to their vanilla Emacs bindings (beginning-
+;; /end-of-defun, append-next-kill, right-word/left-word, abort-recursive-
+;; edit, kill-whole-line); M-<delete>, M-D, C-M-], M-F, M-B, C-S-d, C-S-a
+;; become unbound.
+(bind-key "C-M-f" 'forward-sexp)
+(bind-key "C-M-b" 'backward-sexp)
+(bind-key "C-M-d" 'down-list)
+(bind-key "C-M-u" 'backward-up-list)
+(bind-key "C-M-n" 'forward-list)
+(bind-key "C-M-p" 'backward-list)
+(bind-key "C-M-k" 'kill-sexp)
+(bind-key "C-M-SPC" 'mark-sexp)
 
 
 ;;; outline-magic
