@@ -1123,7 +1123,7 @@ point reaches the beginning or end of the buffer, stop there."
   (
    (sh-mode . lsp-mode)
    (prog-mode . (lambda ()
-                        (unless (derived-mode-p 'emacs-lisp-mode)
+                        (unless (derived-mode-p 'emacs-lisp-mode 'sql-mode)
                           (lsp-deferred))))
    (text-mode . (lambda ()
                   ;; If something enabled lsp-mode for this buffer, turn it off.
@@ -1137,6 +1137,7 @@ point reaches the beginning or end of the buffer, stop there."
   :commands (lsp lsp-deferred)
   :custom
   (lsp-ruff-server-command '("ruff" "server"))
+  (lsp-disabled-clients '(sql-ls))
   (lsp-prefer-capf t)
   (lsp-idle-delay 0.0)
   (lsp-enable-snippet nil)
