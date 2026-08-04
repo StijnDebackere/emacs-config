@@ -22,6 +22,12 @@
 (setq inhibit-startup-message t)
 (setq initial-scratch-message "")
 
+;; Keep native-comp warnings/errors out of your face (still logged to
+;; *Async-native-compile-log*), and cap parallel compiler jobs so a
+;; cold eln-cache doesn't saturate every core at once.
+(setq native-comp-async-report-warnings-errors 'silent)
+(setq native-comp-async-jobs-number 4)
+
 ;; Bootstrap straight.el
 (defvar bootstrap-version)
 (let ((bootstrap-file
