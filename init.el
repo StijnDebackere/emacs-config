@@ -504,7 +504,7 @@ Returns:
 (use-package rg)
 
 ;;; wgrep
-(use-package wgrep-ag)
+(use-package wgrep)
 
 ;;; projectile:
 (use-package projectile
@@ -512,62 +512,91 @@ Returns:
   (:map projectile-mode-map
         ("s-p" . 'projectile-command-map))
   :init
-  (projectile-mode t)
+  (projectile-mode t))
+
+
+;;; vertico + consult + marginalia + orderless + embark
+;; replaces ivy/counsel/swiper/ivy-rich: same completion-in-minibuffer job,
+;; but built directly on Emacs's own `completing-read' instead of a bespoke
+;; engine, so any command that uses standard completion benefits, not just
+;; the ones with a dedicated counsel-* wrapper.
+(use-package vertico
   :custom
-  (projectile-completion-system 'ivy))
-
-
-;;; ivy
-(use-package ivy
-  :diminish (ivy-mode . "")
+  (vertico-cycle t)
   :init
-  (defun ivy-toggle-mark ()
-    "Toggle mark for current candidate and move forwards."
-    (interactive)
-    (if (ivy--marked-p)
-        (ivy-unmark)
-      (ivy-mark)))
-  :bind
-  (:map ivy-minibuffer-map
-        ("C-SPC" . ivy-toggle-mark))
-  ("C-c C-o" . ivy-occur)
-  :config
-  (ivy-mode 1)
-  :custom
-  ;; see https://github.com/abo-abo/swiper/issues/1169#issuecomment-323738674
-  ;; selects the prompt when using `previous-line' which can bypass autocomplete
-  (ivy-use-selectable-prompt t)
-  (ivy-use-virtual-buffers t)
-  (enable-recursive-minibuffers t)
-  (ivy-count-format "%d/%d ")
-  ;; set actions when running C-x b
-  ;; replace "frame" with window to open in new window
-  (ivy-set-actions
-   'ivy-switch-buffer
-   '(("j" switch-to-buffer-other-frame "other frame")
-     ("k" kill-buffer "kill")
-     ("r" ivy--rename-buffer-action "rename"))))
+  (vertico-mode))
 
-(use-package counsel
+;; ido-like directory navigation in the minibuffer -- bundled with vertico
+;; itself, not a separate package
+(use-package vertico-directory
+  :after vertico
+  :straight nil
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
+(savehist-mode 1)
+(setq enable-recursive-minibuffers t)
+
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  ;; orderless first so `find-file' gets space-separated/out-of-order
+  ;; matching too; partial-completion and basic stay as fallbacks (basic in
+  ;; particular is what makes TRAMP hostname completion, e.g. `/ssh:`, work)
+  (completion-category-overrides '((file (styles orderless partial-completion basic)))))
+
+(use-package marginalia
+  :init
+  (marginalia-mode))
+
+(use-package consult
   :bind
-  ;; use swiper instead of isearch
-  ;; if you press M-j, word at point is inserted
-  ("C-s" . swiper)  ;; Press M-n within the `swiper-isearch-mode' to fill the word at point
-  ("M-x" . counsel-M-x)
-  ("C-x C-f" . counsel-find-file)
-  ("C-c C-t" . counsel-outline)
-  ;; Still not completely happy with this one
-  ;; not the same as helm-show-kill-ring
-  ("M-y" . counsel-yank-pop)
+  ;; unifies buffers/recentf/bookmarks -- direct replacement for
+  ;; `ivy-use-virtual-buffers'
+  ("C-x b" . consult-buffer)
+  ;; use consult-line instead of isearch
+  ;; word at point is offered as the first M-n history entry, same as swiper
+  ("C-s" . consult-line)
+  ("M-y" . consult-yank-pop)
+  ("C-c C-t" . consult-outline)
   ;; If called with prefix argument, directory and args can be provided
-  ("C-c s" . counsel-ag)
-  :custom
-  ;; separate history items with line of dashes
-  (counsel-yank-pop-separator (concat "\n" (make-string 70 ?-) "\n")))
+  ("C-c s" . consult-ripgrep))
 
-(use-package ivy-rich
-  :config
-  (ivy-rich-mode 1))
+;; per-candidate actions (kill/rename/other-frame buffer, etc.) and
+;; multi-candidate marking -- replaces the custom `ivy-toggle-mark' /
+;; `ivy-set-actions' code, using embark's own built-in action set instead
+;; of hand-written ones
+(use-package embark
+  :bind
+  ("C-;" . embark-act)
+  ;; turns the current candidate list into an editable buffer, matching the
+  ;; old `ivy-occur' workflow. Which mode you land in -- and how to make it
+  ;; editable -- depends on the source command:
+  ;; - `consult-ripgrep'/grep results -> `grep-mode', use `wgrep':
+  ;;   C-c C-p to make it editable, C-c C-e to apply the changes to the
+  ;;   actual files, C-c C-k to discard instead
+  ;; - `consult-line' results -> `occur-mode' (built into Emacs):
+  ;;   e to enter `occur-edit-mode', C-c C-c to apply the changes back to
+  ;;   the original buffer
+  ("C-c C-o" . embark-export)
+  ("C-h B" . embark-bindings)
+  (:map vertico-map
+        ;; toggle-select the candidate at point directly, same muscle memory
+        ;; as the old `ivy-toggle-mark'
+        ("C-SPC" . embark-select)
+        ;; matches ivy's own M-o action-dispatch key; scoped to the
+        ;; minibuffer so the global M-o -> ace-window binding is untouched
+        ("M-o" . embark-act)
+        ;; act on the whole `embark-select' selection instead of just the
+        ;; candidate at point; with an empty selection this acts on every
+        ;; candidate shown, hence the separate key rather than reusing M-o
+        ("M-O" . embark-act-all)))
+
+(use-package embark-consult
+  :after (embark consult))
 
 
 ;;; window movement
@@ -905,7 +934,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 
 ;;; Themes
-(defalias 'switch-theme 'counsel-load-theme)
+(defalias 'switch-theme 'consult-theme)
 
 ;; # You may need to run these two lines if you haven't set up Homebrew
 ;; # Cask and its fonts formula.
@@ -950,8 +979,11 @@ point reaches the beginning or end of the buffer, stop there."
     (nerd-icons-install-fonts t)))
 (use-package nerd-icons-dired
   :hook (dired-mode . nerd-icons-dired-mode))
-(use-package nerd-icons-ivy-rich
-  :init (nerd-icons-ivy-rich-mode 1))
+(use-package nerd-icons-completion
+  :after marginalia
+  :config
+  (nerd-icons-completion-mode)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 ;;;; powerline
 (use-package powerline
@@ -1104,18 +1136,20 @@ point reaches the beginning or end of the buffer, stop there."
 ;;       (message "Changed LanguageTool language to %s" ltex-lang)
 ;;       (lsp-restart-workspace))))
 
-(defun lsp-ivy-workspace-symbol-or-imenu (arg)
-  "Use counsel-imenu on ARG only if no lsp-mode available."
+(defun consult-lsp-symbols-or-imenu (arg)
+  "Use `consult-lsp-symbols' on ARG if `lsp-mode' is active, else `consult-imenu'."
   (interactive "P")
   (if lsp-mode
-      (lsp-ivy-workspace-symbol arg)
-    (counsel-imenu)))
+      (consult-lsp-symbols arg)
+    (consult-imenu)))
 
-(use-package lsp-ivy
-  :commands lsp-ivy-workspace-symbol
-  :bind ("M-i" . lsp-ivy-workspace-symbol-or-imenu))
+(use-package consult-lsp
+  :commands consult-lsp-symbols
+  :bind ("M-i" . consult-lsp-symbols-or-imenu)
+  :config
+  (define-key lsp-mode-map [remap xref-find-apropos] #'consult-lsp-symbols))
 
-(bind-key "C-c C-j" 'counsel-imenu)
+(bind-key "C-c C-j" 'consult-imenu)
 
 (use-package lsp-ui
   :commands lsp-ui-mode
