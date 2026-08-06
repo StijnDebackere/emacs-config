@@ -12,16 +12,6 @@
 ;;; Startup:
 ;;  --------
 
-;; Turn off mouse interface early in startup to avoid momentary display
-(when window-system
-  (tool-bar-mode -1)
-  (scroll-bar-mode -1)
-  (tooltip-mode -1))
-
-(add-to-list 'default-frame-alist '(undecorated-round . t))
-(setq inhibit-startup-message t)
-(setq initial-scratch-message "")
-
 ;; Keep native-comp warnings/errors out of your face (still logged to
 ;; *Async-native-compile-log*), and cap parallel compiler jobs so a
 ;; cold eln-cache doesn't saturate every core at once.
@@ -45,28 +35,16 @@
       (eval-print-last-sexp)))
   (load bootstrap-file nil 'nomessage))
 
-(straight-use-package 'use-package)
-(straight-use-package 'diminish)
-
-;; Set up package
-(require 'package)
-(add-to-list 'package-archives
-             '("melpa" . "http://melpa.org/packages/") t)
-(add-to-list 'package-archives '("org" . "http://orgmode.org/elpa/") t)
-(when (boundp 'package-pinned-packages)
-  (setq package-pinned-packages
-        '((org-plus-contrib . "org"))))
-
-
-;; From use-package README
-(eval-when-compile
-  (require 'use-package)
-  (setq use-package-always-ensure t))
+;; use-package ships with Emacs itself; wire it to straight so a bare
+;; `(use-package foo)' installs `foo' via straight, without needing `:ensure'.
+(setq straight-use-package-by-default t)
+(require 'use-package)
 (require 'bind-key)
 
 ;;;; Server start-up
 ;; Start the emacs server so files are opened in the opened emacs instance.
 (use-package server
+  :straight nil
   :config
   (progn
     (if (not (server-running-p)) (server-start))))
@@ -252,7 +230,6 @@ Returns:
       fill-column 100)
 
 (use-package popper
-  :straight t
   :bind (("C-'"   . popper-toggle)
          ("M-'"   . popper-cycle)
          ("C-M-'" . popper-toggle-type))
@@ -270,7 +247,6 @@ Returns:
 
 (use-package mcp
   :straight (:host github :repo "lizqwerscott/mcp.el" :files ("*.el" "*.org"))
-  :ensure t
   ;; :custom (mcp-hub-servers
   ;;          `(("filesystem" . (:command "npx"
   ;;                             :args ("-y" "@modelcontextprotocol/server-filesystem")
@@ -298,7 +274,7 @@ Returns:
 ;; active region when typing an opening delimiter, given `delete-selection-mode'
 ;; is also on above)
 (use-package elec-pair
-  :ensure nil
+  :straight nil
   :config
   (electric-pair-mode 1)
   :custom
@@ -331,7 +307,7 @@ Returns:
 ;; - Come up with different shortcuts that do not result in me accidentally
 ;;   promoting and demoting LaTeX sections
 (use-package outline
-  :ensure nil
+  :straight nil
   :diminish outline-minor-mode
   :config
   (use-package outline-magic
@@ -410,7 +386,7 @@ Returns:
 ;;; auto-revert-mode
 ;; autorevert buffer upon file changes
 (use-package autorevert
-  :ensure nil
+  :straight nil
   :delight auto-revert-mode
   :config
   (global-auto-revert-mode)
@@ -421,7 +397,7 @@ Returns:
 
 ;;; dired
 (use-package dired
-  :ensure nil
+  :straight nil
   :bind (:map dired-mode-map
               ("RET" . dired-find-alternate-file)
               ("<backspace>" . dired-up-directory)
@@ -464,7 +440,6 @@ Returns:
 
 (use-package pr-review
   :straight (:host github :repo "blahgeek/emacs-pr-review" :files ("*.el" "graphql"))
-  :ensure t
   :after (magit forge)
   ;; see https://gitlab.com/magus/mes/-/blob/86153/lisp/mes-dev-basics.el#L76
   :config
@@ -499,6 +474,7 @@ Returns:
 
 ;;; ediff
 (use-package ediff
+  :straight nil
   :bind
   ("C-c e" . ediff-files)
   :custom
@@ -521,6 +497,7 @@ Returns:
 
 ;;; tramp
 (use-package tramp
+  :straight nil
   :demand
   :config
   :custom
@@ -605,7 +582,6 @@ Returns:
 
 ;;;; ace-window
 (use-package ace-window
-  :ensure t
   :defer 1
   :bind
   ("M-o" . ace-window)
@@ -864,7 +840,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; combobulate
 (use-package treesit
-  :ensure nil
+  :straight nil
   :preface
   (defun mp-setup-install-grammars ()
     "Install Tree-sitter grammars if they are absent."
@@ -1028,7 +1004,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;;;; GitHub CoPilot
 (use-package copilot
   :straight (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
-  :ensure t
   ;; :hook (prog-mode . (lambda ()
   ;;                      (unless (derived-mode-p 'sql-mode))
   ;;                      copilot-mode))
@@ -1072,7 +1047,6 @@ point reaches the beginning or end of the buffer, stop there."
 (setq gc-cons-threshold 64000000)
 
 (use-package lsp-mode
-  :straight t
   ;; do not show yas when lsp-mode enabled
   ;; :diminish (yas-minor-mode . "")
   ;; :after (yasnippet)
@@ -1105,7 +1079,6 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;; to make this work, run npm install -g pyright
 (use-package lsp-pyright
-  :straight t
   :init
   ;; see https://github.com/emacs-lsp/lsp-pyright/issues/66#issuecomment-1144136538
   ;; this will start a separate process for each lsp
@@ -1155,7 +1128,6 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "C-c C-j" 'counsel-imenu)
 
 (use-package lsp-ui
-  :straight t
   :commands lsp-ui-mode
   :bind
   ("s->" . lsp-ui-find-next-reference)
@@ -1173,13 +1145,14 @@ point reaches the beginning or end of the buffer, stop there."
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
 (use-package reftex
+  :straight nil
   :defer t
   :diminish reftex-mode
   :custom
   (reftex-plug-into-auctex t))
 (use-package tex
   ;; to get working: https://github.com/jwiegley/use-package/issues/379
-  :ensure auctex
+  :straight auctex
   :defer t
   :config
   ;; latexmk document compilation
