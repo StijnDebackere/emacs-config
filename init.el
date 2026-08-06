@@ -366,8 +366,6 @@ Returns:
   (("C-x g" . magit-status)
    ("C-c f" . magit-file-dispatch)
    ("C-c g" . magit-dispatch))
-  :config
-  (global-auto-revert-mode 1)
   ;; Add a suffix to an existing transient
   :custom
   (magit-log-arguments (quote ("--decorate" "-n256")))
