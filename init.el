@@ -335,46 +335,6 @@ Returns:
 ;;   (activate-input-method "TeX"))
 ;; (add-hook 'text-mode-hook 'sdb/enable-dead-keys)
 
-;; ;;; flyspell:
-;; ;; setup flyspell
-;; ;;;; TODO
-;; ;; - ispell-hunspell-dict-paths-alist contains right dictionaries, but
-;; ;;   ispell-hunspell-dictionary-alist does not seem to load them
-;; ;; - check https://facility9.com/2015/01/unsetting-key-bindings-in-emacs/
-;; (use-package flyspell
-;;   :diminish (flyspell-mode . "")
-;;   :hook
-;;   (text-mode . flyspell-mode)
-;;   (org-mode . flyspell-mode)
-;;   (TeX-mode . flyspell-mode)
-;;   (prog-mode . flyspell-prog-mode)
-;;   (emacs-lisp-mode . flyspell-prog-mode)
-;;   (python-mode . flyspell-prog-mode)
-;;   :bind
-;;   ("C-c w" . sdb/flyspell-check-next-highlighted-word)
-;;   ("C-c b" . flyspell-buffer)
-;;   :custom
-;;   ;; (setenv "LANG" "en_GB.UTF-8")
-;;   (progn (cond
-;;           ((executable-find "aspell")
-;;            ;; you may also need `ispell-extra-args'
-;;            (setq ispell-program-name "aspell"))
-;;           )
-;;           ((executable-find "hunspell")
-;;            (setq ispell-program-name "hunspell")
-;;            (setq ispell-really-hunspell t)
-;;            )
-;;          )
-;;   (ispell-dictionary "british-ize-w_accents")
-;;   :config
-;;   (defun sdb/flyspell-check-next-highlighted-word ()
-;;     "Custom function to spell check next highlighted word."
-;;     (interactive)
-;;     (flyspell-goto-next-error)
-;;     (ispell-word))
-;;   (unbind-key "C-." flyspell-mode-map)
-;;   )
-
 
 ;;; auto-revert-mode
 ;; autorevert buffer upon file changes
@@ -421,14 +381,6 @@ Returns:
   :after magit
   :bind
   ("C-c n" . forge-dispatch))
-
-;; (use-package code-review
-;;   :straight (:host github :repo "doomelpa/code-review")
-;;   :ensure t
-;;   :after magit
-;;   :custom
-;;   (code-review-auth-login-marker 'forge)
-;;   )
 
 (use-package pr-review
   :straight (:host github :repo "blahgeek/emacs-pr-review" :files ("*.el" "graphql"))
@@ -985,19 +937,13 @@ point reaches the beginning or end of the buffer, stop there."
   (nerd-icons-completion-mode)
   (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
-;;;; powerline
-(use-package powerline
-  :disabled
-  :config
-  (powerline-default-theme))
-
 ;;;; Default theme
-(use-package material-theme)
-(use-package dracula-theme)
-(use-package solarized-theme)
-(use-package gotham-theme
+(use-package material-theme
   :config
   (load-theme 'material t))
+(use-package dracula-theme)
+(use-package solarized-theme)
+(use-package gotham-theme)
 
 
 ;;; Languages:
@@ -1040,28 +986,6 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package flycheck
   :init
   (global-flycheck-mode))
-
-;; ;;;; SQL
-;; (use-package flymake-sqlfluff
-;;   :hook (sql-mode . #'flymake-sqlfluff-load))
-
-;;;; python
-;; add functionality to automatically load the correct python venv on
-;; focus changes -> not required, lsp-pyright with
-;; lsp-pyright-multi-root nil loads local venv correctly
-;; (use-package pyvenv
-;;   :ensure t)
-
-;; (use-package pyvenv-auto
-;;   :ensure t)
-
-;; (defun switch-python-venv (&optional frame)
-;;   "Switch Python virtualenv for FRAME."
-;;   (when (eq major-mode 'python-mode)
-;;     (pyvenv-auto-run)
-;;   ))
-
-;; (add-to-list 'window-selection-change-functions 'switch-python-venv)
 
 ;;;; lsp
 ;; recommendations in https://emacs-lsp.github.io/lsp-mode/page/performance/
@@ -1111,31 +1035,6 @@ point reaches the beginning or end of the buffer, stop there."
   ;; [DEPRECATED] for lsp-ruff, make sure to install ruff-lsp somewhere on the
   ;; exec-path => now use `ruff server` directly
 
-
-;; ;; to use LanguageTool for spelling and grammar checking
-;; (use-package lsp-ltex
-;;   :ensure t
-;;   :hook (text-mode . (lambda ()
-;;                        (require 'lsp-ltex)
-;;                        (lsp-deferred)))  ; or lsp-deferred
-;;   :bind
-;;   ("C-c l" . lsp-ltex-change-language)
-;;   :init
-;;   (setq lsp-ltex-version "15.2.0")  ; make sure you have set this, see below
-;;   (setq lsp-ltex-check-frequency "save")
-;;   (defun lsp-ltex-change-language ()
-;;     "Change the LanguageTool language."
-;;     (interactive)
-;;     (let* ((completions '(("English" . "en-US")
-;;                           ("Spanish" . "es")
-;;                           ;; ("Automatic" . "auto")
-;;                           ("Dutch" . "nl-BE")))
-;;            (ltex-lang (cdr (assoc (ivy-completing-read "Select language for LanguageTool: " completions)
-;;                                   completions))))
-;;       (setq lsp-ltex-language ltex-lang)
-;;       (message "Changed LanguageTool language to %s" ltex-lang)
-;;       (lsp-restart-workspace))))
-
 (defun consult-lsp-symbols-or-imenu (arg)
   "Use `consult-lsp-symbols' on ARG if `lsp-mode' is active, else `consult-imenu'."
   (interactive "P")
@@ -1161,10 +1060,6 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references))
-
-;; ;; optionally if you want to use debugger
-;; (use-package dap-mode)
-;; ;; (use-package dap-LANGUAGE) to load the dap adapter for your language
 
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
@@ -1231,8 +1126,6 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 
 ;;;; elisp
 (use-package eldoc)
-
-;; (load "~/.emacs.d/sdb-init.el")
 
 
 ;;; Custom:
