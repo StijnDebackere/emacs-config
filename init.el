@@ -1021,7 +1021,9 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-modeline-code-actions-mode 1)
   (lsp-auto-execute-action nil)
   ;; (lsp-auto-guess-root t)
-  )
+  ;; buffers like plain `lisp-mode', `special-mode', or `makefile-bsdmake-mode'
+  ;; have no configured lsp client at all, so this warning is just noise
+  (lsp-warn-no-matched-clients nil))
 
 ;; to make this work, run npm install -g pyright
 (use-package lsp-pyright
