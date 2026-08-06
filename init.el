@@ -554,58 +554,44 @@ Returns:
 ;;;; ace-window
 (use-package ace-window
   :defer 1
+  :preface
+  (defun sdb/ace-window-dispatch (arg)
+    "Call `ace-window', showing the `aw-dispatch-alist' shortcuts first
+when there are more than 2 windows to choose from."
+    (interactive "p")
+    (if (> (length (aw-window-list)) 2)
+        (aw-show-dispatch-help)
+      (ace-window arg)))
+  (defun sdb/ace-window-set-faces (&rest _)
+    "Set ace-window's own faces.
+Several themes (material, gotham) define `aw-leading-char-face' and/or
+`aw-mode-line-face' themselves, silently overriding this customization
+whenever they're (re-)enabled -- so this is also hooked into
+`enable-theme-functions', not just called once here."
+    (when (facep 'aw-leading-char-face)
+      ;; see https://github.com/abo-abo/ace-window/issues/44#issuecomment-264923922
+      (set-face-attribute 'aw-leading-char-face nil
+                          :foreground "deep sky blue"
+                          :background nil
+                          :weight 'bold
+                          :height 10.0)
+      (set-face-attribute 'aw-mode-line-face nil
+                          :inherit 'mode-line-buffer-id
+                          :foreground "indian red")))
   :bind
-  ("M-o" . ace-window)
+  ("M-o" . sdb/ace-window-dispatch)
   :config
-  ;; see https://github.com/abo-abo/ace-window/issues/44#issuecomment-264923922
-  (set-face-attribute 'aw-leading-char-face nil
-                      :foreground "deep sky blue"
-                      :background nil
-                      :weight 'bold
-                      :height 10.0)
-  (set-face-attribute 'aw-mode-line-face nil
-                      :inherit 'mode-line-buffer-id
-                      :foreground "indian red")
+  (sdb/ace-window-set-faces)
+  (add-hook 'enable-theme-functions #'sdb/ace-window-set-faces)
   (setq aw-keys   '(?a ?s ?d ?f ?j ?k ?l)
         aw-dispatch-always nil
         aw-dispatch-alist
         '((?x aw-delete-window     "Ace - Delete Window")
           (?c aw-swap-window       "Ace - Swap Window")
-          (?n aw-flip-window)
           (?h aw-split-window-vert "Ace - Split Vert Window")
           (?v aw-split-window-horz "Ace - Split Horz Window")
           (?m delete-other-windows "Ace - Maximize Window")
-          (?g delete-other-windows)
-          (?b balance-windows)
-          (?u winner-undo)
-          (?r winner-redo)))
-
-  ;; (when (package-installed-p 'hydra)
-  ;;   (defhydra hydra-window (:color blue :hint nil :idle 0.4 :timeout 3)
-  ;;     "
-  ;;                                                                             ╭────────────┐
-  ;;                                                                             │ Ace Window │
-  ;;           ╭─────────────────────────────────────────────────────────────────┴────────────╯
-  ;;               [^w^] windows size [^r^] winner redo  [^u^] winner undo  [^o^] scroll other
-  ;;               [^a^] jump window  [^s^] jump window  [^d^] jump window  [^f^] jump window
-  ;;               [^g^] max. current [^h^] split horz.  [^j^] jump window  [^k^] jump window
-  ;;               [^l^] jump window  [^;^] swap window  [^x^] del. window  [^c^] swap window
-  ;;               [^v^] split vert.  [^b^] balance win. [^n^] last window  [^m^] max window
-  ;;           --------------------------------------------------------------------------------
-  ;;              ")
-  ;;   (defhydra hydra-window-size (:color red)
-  ;;     "Windows size"
-  ;;     ("j" shrink-window-horizontally "shrink horizontal")
-  ;;     ("k" shrink-window "shrink vertical")
-  ;;     ("l" enlarge-window "enlarge vertical")
-  ;;     (";" enlarge-window-horizontally "enlarge horizontal"))
-  ;;   (defhydra hydra-window-frame (:color red)
-  ;;     "Frame"
-  ;;     ("f" make-frame "new frame")
-  ;;     ("x" delete-frame "delete frame"))
-  ;;   (add-to-list 'aw-dispatch-alist '(?w hydra-window-size/body) t)
-  ;;   (add-to-list 'aw-dispatch-alist '(?o hydra-window-scroll/body) t)
-  ;;   (add-to-list 'aw-dispatch-alist '(?\; hydra-window-frame/body) t))
+          (?b balance-windows      "Ace - Balance Windows")))
   (ace-window-display-mode t))
 
 
