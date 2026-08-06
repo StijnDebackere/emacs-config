@@ -1041,7 +1041,11 @@ point reaches the beginning or end of the buffer, stop there."
   :bind
   ("s->" . lsp-ui-find-next-reference)
   ("s-<" . lsp-ui-find-prev-reference)
-  ("C-c C-d" . lsp-ui-doc-glance)  ;; default ("s-l h g")
+  ;; scoped to lsp-ui's own minor-mode map, not global -- major-mode maps
+  ;; take precedence over the global map, and e.g. `python-mode-map' already
+  ;; claims C-c C-d for `python-describe-at-point'
+  (:map lsp-ui-mode-map
+        ("C-c C-d" . lsp-ui-doc-glance))  ;; default ("s-l h g")
   :custom
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
