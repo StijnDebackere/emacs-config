@@ -944,10 +944,14 @@ point reaches the beginning or end of the buffer, stop there."
   (global-ligature-mode t))
 
 ;;;; Icons
-(use-package all-the-icons)
-(use-package all-the-icons-dired)
-(use-package all-the-icons-ivy-rich
-  :init (all-the-icons-ivy-rich-mode 1))
+(use-package nerd-icons
+  :config
+  (unless (find-font (font-spec :name "Symbols Nerd Font Mono"))
+    (nerd-icons-install-fonts t)))
+(use-package nerd-icons-dired
+  :hook (dired-mode . nerd-icons-dired-mode))
+(use-package nerd-icons-ivy-rich
+  :init (nerd-icons-ivy-rich-mode 1))
 
 ;;;; powerline
 (use-package powerline
