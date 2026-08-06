@@ -180,7 +180,6 @@ Returns:
 
 ;; wrap lines in buffer
 (global-visual-line-mode)
-(diminish 'visual-line-mode)
 
 (setq uniquify-buffer-name-style 'forward)
 
@@ -258,15 +257,12 @@ Returns:
 
 ;;; automatic whitespace removal
 (use-package ws-butler
-  :diminish ws-butler-mode
   :hook (prog-mode . ws-butler-mode))
 
 
-;;; save emacs buffer upon loss of focus
-(use-package super-save
-  :diminish super-save-mode
-  :config
-  (super-save-mode +1))
+;;; save file-visiting buffers after a period of idle time
+;; native replacement for super-save
+(auto-save-visited-mode 1)
 
 
 ;;; electric-pair-mode
@@ -300,35 +296,32 @@ Returns:
 (bind-key "C-M-SPC" 'mark-sexp)
 
 
-;;; outline-magic
-;; outline-magic simplifies many of the commands in outline-mode, easy
-;; cycling, navigation, promotion and demotion of headings in documents
+;;; outline
+;; Emacs's own outline.el has provided cycling, subtree movement, and
+;; promote/demote natively since Emacs 29, making outline-magic redundant.
 ;;;; TODO:
 ;; - Come up with different shortcuts that do not result in me accidentally
 ;;   promoting and demoting LaTeX sections
 (use-package outline
   :straight nil
-  :diminish outline-minor-mode
-  :config
-  (use-package outline-magic
-    :bind (:map outline-minor-mode-map
-                ("C-<tab>" . outline-cycle)
-                ("M-<up>" . outline-move-subtree-up)
-                ("M-<down>" . outline-move-subtree-down)
-                ("M-<left>" . outline-promote)
-                ("M-<right>" . outline-demote)
-                ("C-c C-n" . outline-next-visible-heading)
-                ("C-c C-p" . outline-previous-visible-heading))
-    :hook ((LaTeX-mode . outline-minor-mode)
-           ;; taken from the example in outline-magic
-           (LaTeX-mode . (lambda ()
-                           (setq outline-promotion-headings
-                                 '("\\chapter"
-                                   "\\section"
-                                   "\\subsection"
-                                   "\\subsubsection"
-                                   "\\paragraph"
-                                   "\\subparagraph")))))))
+  :bind (:map outline-minor-mode-map
+              ("C-<tab>" . outline-cycle)
+              ("M-<up>" . outline-move-subtree-up)
+              ("M-<down>" . outline-move-subtree-down)
+              ("M-<left>" . outline-promote)
+              ("M-<right>" . outline-demote)
+              ("C-c C-n" . outline-next-visible-heading)
+              ("C-c C-p" . outline-previous-visible-heading))
+  :hook ((LaTeX-mode . outline-minor-mode)
+         ;; taken from the example in outline-magic
+         (LaTeX-mode . (lambda ()
+                         (setq outline-promotion-headings
+                               '("\\chapter"
+                                 "\\section"
+                                 "\\subsection"
+                                 "\\subsubsection"
+                                 "\\paragraph"
+                                 "\\subparagraph"))))))
 
 
 (use-package minions
@@ -387,7 +380,6 @@ Returns:
 ;; autorevert buffer upon file changes
 (use-package autorevert
   :straight nil
-  :delight auto-revert-mode
   :config
   (global-auto-revert-mode)
   :custom
@@ -765,11 +757,9 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; avy
 (use-package avy
-  :diminish t
   :bind ("C-." . avy-goto-char))
 
 (use-package avy-zap
-  :diminish t
   :bind ("M-z" . avy-zap-to-char-dwim))
 
 ;;;; function navigation
@@ -981,7 +971,6 @@ point reaches the beginning or end of the buffer, stop there."
 ;; Setup company-mode for autocompletion
 
 (use-package company
-  :diminish (company-mode . "")
   :hook
   (prog-mode . company-mode)
   :bind (:map company-active-map
@@ -998,7 +987,6 @@ point reaches the beginning or end of the buffer, stop there."
   (company-show-numbers t))
 
 (use-package company-box
-  :diminish (company-box-mode . "")
   :hook (company-mode . company-box-mode))
 
 ;;;; GitHub CoPilot
@@ -1008,14 +996,12 @@ point reaches the beginning or end of the buffer, stop there."
   ;;                      (unless (derived-mode-p 'sql-mode))
   ;;                      copilot-mode))
   :hook (prog-mode . copilot-mode)
-  :diminish (copilot-mode . "")
   :bind (:map copilot-completion-map
               ("TAB" . copilot-accept-completion))
   )
 
 ;;;; Flycheck
 (use-package flycheck
-  :diminish (flycheck-mode . "")
   :init
   (global-flycheck-mode))
 
@@ -1147,7 +1133,6 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package reftex
   :straight nil
   :defer t
-  :diminish reftex-mode
   :custom
   (reftex-plug-into-auctex t))
 (use-package tex
@@ -1207,8 +1192,7 @@ Hook this function into `TeX-after-compilation-finished-functions'."
 
 
 ;;;; elisp
-(use-package eldoc
-  :diminish (eldoc-mode . ""))
+(use-package eldoc)
 
 ;; (load "~/.emacs.d/sdb-init.el")
 
