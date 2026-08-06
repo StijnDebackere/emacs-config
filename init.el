@@ -49,7 +49,11 @@
   (progn
     (if (not (server-running-p)) (server-start))))
 
-;;;; Mac customization
+
+;;; macOS / Environment
+;;  --------------------
+
+;;;; macOS defaults
 (when (string-equal system-type "darwin")
   ;; delete files by moving them to the trash
   (setq delete-by-moving-to-trash t)
@@ -69,6 +73,7 @@
   (put 'ns-print-buffer 'disabled t)
   (put 'suspend-frame 'disabled t))
 
+;;;; Finder / iTerm helpers
 (defun open-dir-in-finder ()
   "Open a new Finder window to the path of the current buffer."
   (interactive)
@@ -83,6 +88,18 @@
                          iterm-app-path
                        iterm-brew-path)))
     (start-process "sdb-open-dir-process" nil "open" "-a" iterm-path ".")))
+
+(bind-key "C-c o f" 'open-dir-in-finder)
+(bind-key "C-c o t" 'open-dir-in-iterm)
+
+;;;; path loading
+(use-package exec-path-from-shell
+  :init
+  (exec-path-from-shell-initialize))
+
+
+;;; File & buffer utilities
+;;  ------------------------
 
 ;; https://github.com/syl20bnr/spacemacs/blob/0bbb4/layers/spacemacs/spacemacs-defaults/funcs.el#L779-L787
 (defun sdb--file-path ()
@@ -104,15 +121,8 @@ Returns:
         (message "%s" file-name))
     (message "WARNING: Current buffer is not attached to a file!")))
 
-(bind-key "C-c o f" 'open-dir-in-finder)
-(bind-key "C-c o t" 'open-dir-in-iterm)
 
-;;;;; path loading
-(use-package exec-path-from-shell
-  :init
-  (exec-path-from-shell-initialize))
-
-;;;; Sane defaults
+;;; Sane defaults
 ;; Amalgamation of
 ;; - https://github.com/magnars/.emacs.d/blob/master/settings/sane-defaults.el
 ;; - http://pages.sachachua.com/.emacs.d/Sacha.html
@@ -228,6 +238,55 @@ Returns:
                                         ; (default: 300)
       fill-column 100)
 
+
+;;;; automatic whitespace removal
+(use-package ws-butler
+  :hook (prog-mode . ws-butler-mode))
+
+;;;; save file-visiting buffers after a period of idle time
+;; native replacement for super-save
+(auto-save-visited-mode 1)
+
+;;;; electric-pair-mode
+;; native replacement for smartparens' auto-pairing (incl. wrapping an
+;; active region when typing an opening delimiter, given `delete-selection-mode'
+;; is also on above)
+(use-package elec-pair
+  :straight nil
+  :config
+  (electric-pair-mode 1)
+  :custom
+  (electric-pair-preserve-balance t))
+
+;;;; auto-revert-mode
+;; autorevert buffer upon file changes
+(use-package autorevert
+  :straight nil
+  :config
+  (global-auto-revert-mode)
+  :custom
+  (global-auto-revert-non-file-buffers t)
+  (auto-revert-verbose nil))
+
+;;;; dired
+(use-package dired
+  :straight nil
+  :bind (:map dired-mode-map
+              ("RET" . dired-find-alternate-file)
+              ("<backspace>" . dired-up-directory)
+              ("b" . dired-up-directory)
+              ("^" . (lambda () (interactive) (find-alternate-file ".."))))
+  :custom
+  (dired-recursive-copies 'always)
+  (dired-recursive-deletes 'top))
+
+(use-package nerd-icons-dired
+  :hook (dired-mode . nerd-icons-dired-mode))
+
+
+;;; Window & popup management
+
+;;;; popper
 (use-package popper
   :bind (("C-'"   . popper-toggle)
          ("M-'"   . popper-cycle)
@@ -242,314 +301,6 @@ Returns:
           compilation-mode))
   (popper-mode +1)
   (popper-echo-mode +1))
-
-
-(use-package mcp
-  :straight (:host github :repo "lizqwerscott/mcp.el" :files ("*.el" "*.org"))
-  ;; :custom (mcp-hub-servers
-  ;;          `(("filesystem" . (:command "npx"
-  ;;                             :args ("-y" "@modelcontextprotocol/server-filesystem")
-  ;;                             :roots ("/home/lizqwer/MyProject/")))
-  ;;            ("fetch" . (:command "uvx" :args ("mcp-server-fetch")))))
-  :config (require 'mcp-hub))
-  ;; :hook (after-init . mcp-hub-start-all-server))
-
-
-;;; automatic whitespace removal
-(use-package ws-butler
-  :hook (prog-mode . ws-butler-mode))
-
-
-;;; save file-visiting buffers after a period of idle time
-;; native replacement for super-save
-(auto-save-visited-mode 1)
-
-
-;;; electric-pair-mode
-;; native replacement for smartparens' auto-pairing (incl. wrapping an
-;; active region when typing an opening delimiter, given `delete-selection-mode'
-;; is also on above)
-(use-package elec-pair
-  :straight nil
-  :config
-  (electric-pair-mode 1)
-  :custom
-  (electric-pair-preserve-balance t))
-
-;;; sexp navigation
-;; explicit bindings mirroring the old `sp-smartparens-bindings' scheme,
-;; using Emacs's built-in sexp commands. Most of these already match the
-;; vanilla defaults; bound explicitly here so they don't depend on that.
-;; Keys that had no native equivalent (unwrap, slurp/barf, splice, symbol
-;; nav) are intentionally left alone: C-M-a/C-M-e/C-M-w/C-<right>/C-<left>/
-;; C-]/C-S-<backspace> revert to their vanilla Emacs bindings (beginning-
-;; /end-of-defun, append-next-kill, right-word/left-word, abort-recursive-
-;; edit, kill-whole-line); M-<delete>, M-D, C-M-], M-F, M-B, C-S-d, C-S-a
-;; become unbound.
-(bind-key "C-M-f" 'forward-sexp)
-(bind-key "C-M-b" 'backward-sexp)
-(bind-key "C-M-d" 'down-list)
-(bind-key "C-M-u" 'backward-up-list)
-(bind-key "C-M-n" 'forward-list)
-(bind-key "C-M-p" 'backward-list)
-(bind-key "C-M-k" 'kill-sexp)
-(bind-key "C-M-SPC" 'mark-sexp)
-
-
-;;; outline
-;; Emacs's own outline.el has provided cycling, subtree movement, and
-;; promote/demote natively since Emacs 29, making outline-magic redundant.
-;;;; TODO:
-;; - Come up with different shortcuts that do not result in me accidentally
-;;   promoting and demoting LaTeX sections
-(use-package outline
-  :straight nil
-  :bind (:map outline-minor-mode-map
-              ("C-<tab>" . outline-cycle)
-              ("M-<up>" . outline-move-subtree-up)
-              ("M-<down>" . outline-move-subtree-down)
-              ("M-<left>" . outline-promote)
-              ("M-<right>" . outline-demote)
-              ("C-c C-n" . outline-next-visible-heading)
-              ("C-c C-p" . outline-previous-visible-heading))
-  :hook ((LaTeX-mode . outline-minor-mode)
-         ;; taken from the example in outline-magic
-         (LaTeX-mode . (lambda ()
-                         (setq outline-promotion-headings
-                               '("\\chapter"
-                                 "\\section"
-                                 "\\subsection"
-                                 "\\subsubsection"
-                                 "\\paragraph"
-                                 "\\subparagraph"))))))
-
-
-(use-package minions
-  :config
-  (minions-mode 1))
-
-;;;; Text
-;; ;; Disabled because it annoys me in COMMIT_MSG and yml files...
-;; (defun sdb/enable-dead-keys ()
-;;   "Enable dead key expansion with TeX input method in text mode."
-;;   (activate-input-method "TeX"))
-;; (add-hook 'text-mode-hook 'sdb/enable-dead-keys)
-
-
-;;; auto-revert-mode
-;; autorevert buffer upon file changes
-(use-package autorevert
-  :straight nil
-  :config
-  (global-auto-revert-mode)
-  :custom
-  (global-auto-revert-non-file-buffers t)
-  (auto-revert-verbose nil))
-
-
-;;; dired
-(use-package dired
-  :straight nil
-  :bind (:map dired-mode-map
-              ("RET" . dired-find-alternate-file)
-              ("<backspace>" . dired-up-directory)
-              ("b" . dired-up-directory)
-              ("^" . (lambda () (interactive) (find-alternate-file ".."))))
-  :custom
-  (dired-recursive-copies 'always)
-  (dired-recursive-deletes 'top))
-
-
-;;; magit
-(use-package magit
-  :bind
-  (("C-x g" . magit-status)
-   ("C-c f" . magit-file-dispatch)
-   ("C-c g" . magit-dispatch))
-  ;; Add a suffix to an existing transient
-  :custom
-  (magit-log-arguments (quote ("--decorate" "-n256")))
-  (magit-refresh-status-buffer nil)
-  (remove-hook 'server-switch-hook 'magit-commit-diff)
-  (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
-
-;; See https://docs.magit.vc/forge/Setup-for-Githubcom.html
-(setq auth-sources '("~/.authinfo"))
-(use-package forge
-  :after magit
-  :bind
-  ("C-c n" . forge-dispatch))
-
-(use-package pr-review
-  :straight (:host github :repo "blahgeek/emacs-pr-review" :files ("*.el" "graphql"))
-  :after (magit forge)
-  ;; see https://gitlab.com/magus/mes/-/blob/86153/lisp/mes-dev-basics.el#L76
-  :config
-  (load-file (expand-file-name "~/.emacs.d/sdb/pr-review-mods.el"))
-  ;; Customize your settings
-  (setq pr-review-main-branch-name "main")
-  (setq pr-review-repo-base-dir "~/repos")
-  (setq pr-review-ghub-auth-name 'forge)
-  (transient-define-prefix pr-review-dispatch ()
-    "Main dispatch menu for your-mode"
-    ["Actions"
-     ("e" "Comment" pr-review-context-comment)
-     ("d" "Ediff" pr-review-ediff-with-main)
-     ("a" "Action" pr-review-context-action)
-     ("R" "Refresh" pr-review-refresh)
-     ("c" "Submit" pr-review-submit-review)
-     ("o" "Open in browser" pr-review-open-in-default-browser)])
-  :bind
-  ("C-c j" . pr-review-jump-to-file-in-pr)
-  ("C-c c" . pr-review-comment-on-region)
-  (:map magit-mode-map
-        ("C-c r" . pr-review-from-forge))
-  (:map pr-review-mode-map
-        ("?" . pr-review-dispatch)
-        ("RET" . pr-review-visit-file)
-        ("e" . pr-review-context-comment)
-        ("d" . pr-review-ediff-with-main)
-        ("a" . pr-review-context-action)
-        ("R" . pr-review-refresh)
-        ("c" . pr-review-submit-review)
-        ("o" . pr-review-open-in-default-browser)))
-
-;;; ediff
-(use-package ediff
-  :straight nil
-  :bind
-  ("C-c e" . ediff-files)
-  :custom
-  (ediff-window-setup-function 'ediff-setup-windows-plain)
-  (ediff-split-window-function 'split-window-horizontally)
-  :hook
-  (ediff-before-setup . sdb/store-pre-ediff-winconfig)
-  (ediff-quit . sdb/restore-pre-ediff-winconfig))
-
-;; Restore window configuration after ediff:
-;; Source: http://emacs.stackexchange.com/a/17089
-(defvar sdb/ediff-last-windows nil)
-(defun sdb/store-pre-ediff-winconfig ()
-  "Store window configuration before ediff call."
-  (setq sdb/ediff-last-windows (current-window-configuration)))
-(defun sdb/restore-pre-ediff-winconfig ()
-  "Restore saved window configuration after ediff ends."
-  (set-window-configuration sdb/ediff-last-windows))
-
-
-;;; tramp
-(use-package tramp
-  :straight nil
-  :demand
-  :config
-  :custom
-  (tramp-default-method "ssh")
-  (tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
-  (tramp-set-completion-function "ssh"
-                                 '((tramp-parse-sconfig "/etc/ssh_config")
-                                   (tramp-parse-sconfig "~/.ssh/config"))))
-
-
-;;; ripgrep
-(use-package rg)
-
-;;; wgrep
-(use-package wgrep)
-
-;;; projectile:
-(use-package projectile
-  :bind
-  (:map projectile-mode-map
-        ("s-p" . 'projectile-command-map))
-  :init
-  (projectile-mode t))
-
-
-;;; vertico + consult + marginalia + orderless + embark
-;; replaces ivy/counsel/swiper/ivy-rich: same completion-in-minibuffer job,
-;; but built directly on Emacs's own `completing-read' instead of a bespoke
-;; engine, so any command that uses standard completion benefits, not just
-;; the ones with a dedicated counsel-* wrapper.
-(use-package vertico
-  :custom
-  (vertico-cycle t)
-  :init
-  (vertico-mode))
-
-;; ido-like directory navigation in the minibuffer -- bundled with vertico
-;; itself, not a separate package
-(use-package vertico-directory
-  :after vertico
-  :straight nil
-  :bind (:map vertico-map
-              ("RET" . vertico-directory-enter)
-              ("DEL" . vertico-directory-delete-char)
-              ("M-DEL" . vertico-directory-delete-word))
-  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
-
-(savehist-mode 1)
-(setq enable-recursive-minibuffers t)
-
-(use-package orderless
-  :custom
-  (completion-styles '(orderless basic))
-  ;; orderless first so `find-file' gets space-separated/out-of-order
-  ;; matching too; partial-completion and basic stay as fallbacks (basic in
-  ;; particular is what makes TRAMP hostname completion, e.g. `/ssh:`, work)
-  (completion-category-overrides '((file (styles orderless partial-completion basic)))))
-
-(use-package marginalia
-  :init
-  (marginalia-mode))
-
-(use-package consult
-  :bind
-  ;; unifies buffers/recentf/bookmarks -- direct replacement for
-  ;; `ivy-use-virtual-buffers'
-  ("C-x b" . consult-buffer)
-  ;; use consult-line instead of isearch
-  ;; word at point is offered as the first M-n history entry, same as swiper
-  ("C-s" . consult-line)
-  ("M-y" . consult-yank-pop)
-  ("C-c C-t" . consult-outline)
-  ;; If called with prefix argument, directory and args can be provided
-  ("C-c s" . consult-ripgrep))
-
-;; per-candidate actions (kill/rename/other-frame buffer, etc.) and
-;; multi-candidate marking -- replaces the custom `ivy-toggle-mark' /
-;; `ivy-set-actions' code, using embark's own built-in action set instead
-;; of hand-written ones
-(use-package embark
-  :bind
-  ("C-;" . embark-act)
-  ;; turns the current candidate list into an editable buffer, matching the
-  ;; old `ivy-occur' workflow. Which mode you land in -- and how to make it
-  ;; editable -- depends on the source command:
-  ;; - `consult-ripgrep'/grep results -> `grep-mode', use `wgrep':
-  ;;   C-c C-p to make it editable, C-c C-e to apply the changes to the
-  ;;   actual files, C-c C-k to discard instead
-  ;; - `consult-line' results -> `occur-mode' (built into Emacs):
-  ;;   e to enter `occur-edit-mode', C-c C-c to apply the changes back to
-  ;;   the original buffer
-  ("C-c C-o" . embark-export)
-  ("C-h B" . embark-bindings)
-  (:map vertico-map
-        ;; toggle-select the candidate at point directly, same muscle memory
-        ;; as the old `ivy-toggle-mark'
-        ("C-SPC" . embark-select)
-        ;; matches ivy's own M-o action-dispatch key; scoped to the
-        ;; minibuffer so the global M-o -> ace-window binding is untouched
-        ("M-o" . embark-act)
-        ;; act on the whole `embark-select' selection instead of just the
-        ;; candidate at point; with an empty selection this acts on every
-        ;; candidate shown, hence the separate key rather than reusing M-o
-        ("M-O" . embark-act-all)))
-
-(use-package embark-consult
-  :after (embark consult))
-
-
-;;; window movement
 
 ;;;; ace-window
 (use-package ace-window
@@ -674,7 +425,40 @@ whenever they're (re-)enabled -- so this is also hooked into
 (global-unset-key (kbd "<f11>"))
 
 
-;;; buffer navigation
+;;; AI / MCP tooling
+(use-package mcp
+  :straight (:host github :repo "lizqwerscott/mcp.el" :files ("*.el" "*.org"))
+  ;; :custom (mcp-hub-servers
+  ;;          `(("filesystem" . (:command "npx"
+  ;;                             :args ("-y" "@modelcontextprotocol/server-filesystem")
+  ;;                             :roots ("/home/lizqwer/MyProject/")))
+  ;;            ("fetch" . (:command "uvx" :args ("mcp-server-fetch")))))
+  :config (require 'mcp-hub))
+  ;; :hook (after-init . mcp-hub-start-all-server))
+
+
+;;; Editing & navigation
+
+;;;; sexp navigation
+;; explicit bindings mirroring the old `sp-smartparens-bindings' scheme,
+;; using Emacs's built-in sexp commands. Most of these already match the
+;; vanilla defaults; bound explicitly here so they don't depend on that.
+;; Keys that had no native equivalent (unwrap, slurp/barf, splice, symbol
+;; nav) are intentionally left alone: C-M-a/C-M-e/C-M-w/C-<right>/C-<left>/
+;; C-]/C-S-<backspace> revert to their vanilla Emacs bindings (beginning-
+;; /end-of-defun, append-next-kill, right-word/left-word, abort-recursive-
+;; edit, kill-whole-line); M-<delete>, M-D, C-M-], M-F, M-B, C-S-d, C-S-a
+;; become unbound.
+(bind-key "C-M-f" 'forward-sexp)
+(bind-key "C-M-b" 'backward-sexp)
+(bind-key "C-M-d" 'down-list)
+(bind-key "C-M-u" 'backward-up-list)
+(bind-key "C-M-n" 'forward-list)
+(bind-key "C-M-p" 'backward-list)
+(bind-key "C-M-k" 'kill-sexp)
+(bind-key "C-M-SPC" 'mark-sexp)
+
+;;;; buffer navigation
 (defun sdb/push-mark-no-activate ()
   "Push `point' to `mark-ring' and do not activate the region.
 Equivalent to \\[set-mark-command] when \\[transient-mark-mode] is
@@ -715,7 +499,7 @@ point reaches the beginning or end of the buffer, stop there."
     (when (= orig-point (point))
       (move-beginning-of-line 1))))
 
-;;;; shortcuts
+;;;;; shortcuts
 (bind-key "C-`" 'sdb/push-mark-no-activate)
 (bind-key "M-`" 'sdb/jump-to-mark)
 (bind-key "C-a" 'sdb/smarter-move-beginning-of-line)
@@ -732,7 +516,13 @@ point reaches the beginning or end of the buffer, stop there."
 (bind-key "C-M-S-e" 'end-of-defun)
 
 
-;;; Text manipulation
+;;;; Text manipulation
+;; ;; Disabled because it annoys me in COMMIT_MSG and yml files...
+;; (defun sdb/enable-dead-keys ()
+;;   "Enable dead key expansion with TeX input method in text mode."
+;;   (activate-input-method "TeX"))
+;; (add-hook 'text-mode-hook 'sdb/enable-dead-keys)
+
 (defun copy-line-or-region ()
   "Copy current line, or current text selection."
   (interactive)
@@ -786,7 +576,7 @@ point reaches the beginning or end of the buffer, stop there."
         (replace-regexp "\\([A-Z]\\)" "_\\1" nil (1+ start) end)
         (downcase-region start end)))))
 
-;;;; shortcuts
+;;;;; shortcuts
 (bind-key "C-w" 'cut-line-or-region)
 (bind-key "M-w" 'copy-line-or-region)
 (bind-key "C-M-q" 'unfill-paragraph)
@@ -869,7 +659,244 @@ point reaches the beginning or end of the buffer, stop there."
   ("C-c q" . vr/query-replace))
 
 
-;;; Themes
+;;; UI chrome
+
+;;;; minions
+(use-package minions
+  :config
+  (minions-mode 1))
+
+;;;; outline
+;; Emacs's own outline.el has provided cycling, subtree movement, and
+;; promote/demote natively since Emacs 29, making outline-magic redundant.
+;;;;; TODO:
+;; - Come up with different shortcuts that do not result in me accidentally
+;;   promoting and demoting LaTeX sections
+(use-package outline
+  :straight nil
+  :bind (:map outline-minor-mode-map
+              ("C-<tab>" . outline-cycle)
+              ("M-<up>" . outline-move-subtree-up)
+              ("M-<down>" . outline-move-subtree-down)
+              ("M-<left>" . outline-promote)
+              ("M-<right>" . outline-demote)
+              ("C-c C-n" . outline-next-visible-heading)
+              ("C-c C-p" . outline-previous-visible-heading))
+  :hook ((LaTeX-mode . outline-minor-mode)
+         ;; taken from the example in outline-magic
+         (LaTeX-mode . (lambda ()
+                         (setq outline-promotion-headings
+                               '("\\chapter"
+                                 "\\section"
+                                 "\\subsection"
+                                 "\\subsubsection"
+                                 "\\paragraph"
+                                 "\\subparagraph"))))))
+
+
+;;; Version control
+
+;;;; magit
+(use-package magit
+  :bind
+  (("C-x g" . magit-status)
+   ("C-c f" . magit-file-dispatch)
+   ("C-c g" . magit-dispatch))
+  ;; Add a suffix to an existing transient
+  :custom
+  (magit-log-arguments (quote ("--decorate" "-n256")))
+  (magit-refresh-status-buffer nil)
+  (remove-hook 'server-switch-hook 'magit-commit-diff)
+  (remove-hook 'with-editor-filter-visit-hook 'magit-commit-diff))
+
+;;;; forge
+;; See https://docs.magit.vc/forge/Setup-for-Githubcom.html
+(setq auth-sources '("~/.authinfo"))
+(use-package forge
+  :after magit
+  :bind
+  ("C-c n" . forge-dispatch))
+
+;;;; pr-review
+(use-package pr-review
+  :straight (:host github :repo "blahgeek/emacs-pr-review" :files ("*.el" "graphql"))
+  :after (magit forge)
+  ;; see https://gitlab.com/magus/mes/-/blob/86153/lisp/mes-dev-basics.el#L76
+  :config
+  (load-file (expand-file-name "~/.emacs.d/sdb/pr-review-mods.el"))
+  ;; Customize your settings
+  (setq pr-review-main-branch-name "main")
+  (setq pr-review-repo-base-dir "~/repos")
+  (setq pr-review-ghub-auth-name 'forge)
+  (transient-define-prefix pr-review-dispatch ()
+    "Main dispatch menu for your-mode"
+    ["Actions"
+     ("e" "Comment" pr-review-context-comment)
+     ("d" "Ediff" pr-review-ediff-with-main)
+     ("a" "Action" pr-review-context-action)
+     ("R" "Refresh" pr-review-refresh)
+     ("c" "Submit" pr-review-submit-review)
+     ("o" "Open in browser" pr-review-open-in-default-browser)])
+  :bind
+  ("C-c j" . pr-review-jump-to-file-in-pr)
+  ("C-c c" . pr-review-comment-on-region)
+  (:map magit-mode-map
+        ("C-c r" . pr-review-from-forge))
+  (:map pr-review-mode-map
+        ("?" . pr-review-dispatch)
+        ("RET" . pr-review-visit-file)
+        ("e" . pr-review-context-comment)
+        ("d" . pr-review-ediff-with-main)
+        ("a" . pr-review-context-action)
+        ("R" . pr-review-refresh)
+        ("c" . pr-review-submit-review)
+        ("o" . pr-review-open-in-default-browser)))
+
+;;;; ediff
+(use-package ediff
+  :straight nil
+  :bind
+  ("C-c e" . ediff-files)
+  :custom
+  (ediff-window-setup-function 'ediff-setup-windows-plain)
+  (ediff-split-window-function 'split-window-horizontally)
+  :hook
+  (ediff-before-setup . sdb/store-pre-ediff-winconfig)
+  (ediff-quit . sdb/restore-pre-ediff-winconfig))
+
+;; Restore window configuration after ediff:
+;; Source: http://emacs.stackexchange.com/a/17089
+(defvar sdb/ediff-last-windows nil)
+(defun sdb/store-pre-ediff-winconfig ()
+  "Store window configuration before ediff call."
+  (setq sdb/ediff-last-windows (current-window-configuration)))
+(defun sdb/restore-pre-ediff-winconfig ()
+  "Restore saved window configuration after ediff ends."
+  (set-window-configuration sdb/ediff-last-windows))
+
+
+;;; tramp
+(use-package tramp
+  :straight nil
+  :demand
+  :config
+  :custom
+  (tramp-default-method "ssh")
+  (tramp-auto-save-directory "~/.emacs.d/tramp-autosave")
+  (tramp-set-completion-function "ssh"
+                                 '((tramp-parse-sconfig "/etc/ssh_config")
+                                   (tramp-parse-sconfig "~/.ssh/config"))))
+
+
+;;; Search
+
+;;;; ripgrep
+(use-package rg)
+
+;;;; wgrep
+(use-package wgrep)
+
+
+;;; projectile:
+(use-package projectile
+  :bind
+  (:map projectile-mode-map
+        ("s-p" . 'projectile-command-map))
+  :init
+  (projectile-mode t))
+
+
+;;; Completion (vertico + consult + marginalia + orderless + embark)
+;; replaces ivy/counsel/swiper/ivy-rich: same completion-in-minibuffer job,
+;; but built directly on Emacs's own `completing-read' instead of a bespoke
+;; engine, so any command that uses standard completion benefits, not just
+;; the ones with a dedicated counsel-* wrapper.
+(use-package vertico
+  :custom
+  (vertico-cycle t)
+  :init
+  (vertico-mode))
+
+;; ido-like directory navigation in the minibuffer -- bundled with vertico
+;; itself, not a separate package
+(use-package vertico-directory
+  :after vertico
+  :straight nil
+  :bind (:map vertico-map
+              ("RET" . vertico-directory-enter)
+              ("DEL" . vertico-directory-delete-char)
+              ("M-DEL" . vertico-directory-delete-word))
+  :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
+
+(savehist-mode 1)
+(setq enable-recursive-minibuffers t)
+
+(use-package orderless
+  :custom
+  (completion-styles '(orderless basic))
+  ;; orderless first so `find-file' gets space-separated/out-of-order
+  ;; matching too; partial-completion and basic stay as fallbacks (basic in
+  ;; particular is what makes TRAMP hostname completion, e.g. `/ssh:`, work)
+  (completion-category-overrides '((file (styles orderless partial-completion basic)))))
+
+(use-package marginalia
+  :init
+  (marginalia-mode))
+
+(use-package nerd-icons-completion
+  :after marginalia
+  :config
+  (nerd-icons-completion-mode)
+  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
+
+(use-package consult
+  :bind
+  ;; unifies buffers/recentf/bookmarks -- direct replacement for
+  ;; `ivy-use-virtual-buffers'
+  ("C-x b" . consult-buffer)
+  ;; use consult-line instead of isearch
+  ;; word at point is offered as the first M-n history entry, same as swiper
+  ("C-s" . consult-line)
+  ("M-y" . consult-yank-pop)
+  ("C-c C-t" . consult-outline)
+  ;; If called with prefix argument, directory and args can be provided
+  ("C-c s" . consult-ripgrep))
+
+;; per-candidate actions (kill/rename/other-frame buffer, etc.) and
+;; multi-candidate marking -- replaces the custom `ivy-toggle-mark' /
+;; `ivy-set-actions' code, using embark's own built-in action set instead
+;; of hand-written ones
+(use-package embark
+  :bind
+  ("C-;" . embark-act)
+  ;; turns the current candidate list into an editable buffer, matching the
+  ;; old `ivy-occur' workflow. Which mode you land in -- and how to make it
+  ;; editable -- depends on the source command:
+  ;; - `consult-ripgrep'/grep results -> `grep-mode', use `wgrep':
+  ;;   C-c C-p to make it editable, C-c C-e to apply the changes to the
+  ;;   actual files, C-c C-k to discard instead
+  ;; - `consult-line' results -> `occur-mode' (built into Emacs):
+  ;;   e to enter `occur-edit-mode', C-c C-c to apply the changes back to
+  ;;   the original buffer
+  ("C-c C-o" . embark-export)
+  ("C-h B" . embark-bindings)
+  (:map vertico-map
+        ;; toggle-select the candidate at point directly, same muscle memory
+        ;; as the old `ivy-toggle-mark'
+        ("C-SPC" . embark-select)
+        ;; matches ivy's own M-o action-dispatch key; scoped to the
+        ;; minibuffer so the global M-o -> ace-window binding is untouched
+        ("M-o" . embark-act)
+        ;; act on the whole `embark-select' selection instead of just the
+        ;; candidate at point; with an empty selection this acts on every
+        ;; candidate shown, hence the separate key rather than reusing M-o
+        ("M-O" . embark-act-all)))
+
+(use-package embark-consult
+  :after (embark consult))
+
+
+;;; Themes & appearance
 (defalias 'switch-theme 'consult-theme)
 
 ;; # You may need to run these two lines if you haven't set up Homebrew
@@ -913,13 +940,6 @@ point reaches the beginning or end of the buffer, stop there."
   :config
   (unless (find-font (font-spec :name "Symbols Nerd Font Mono"))
     (nerd-icons-install-fonts t)))
-(use-package nerd-icons-dired
-  :hook (dired-mode . nerd-icons-dired-mode))
-(use-package nerd-icons-completion
-  :after marginalia
-  :config
-  (nerd-icons-completion-mode)
-  (add-hook 'marginalia-mode-hook #'nerd-icons-completion-marginalia-setup))
 
 ;;;; Default theme
 (use-package material-theme
@@ -930,8 +950,7 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package gotham-theme)
 
 
-;;; Languages:
-;;  ----------
+;;; Programming support
 
 ;;;; company-mode
 ;; Setup company-mode for autocompletion
@@ -1050,6 +1069,9 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-ui-peek-enable t)
   (define-key lsp-ui-mode-map [remap xref-find-definitions] #'lsp-ui-peek-find-definitions)
   (define-key lsp-ui-mode-map [remap xref-find-references] #'lsp-ui-peek-find-references))
+
+
+;;; Language-specific modes
 
 ;;;; LaTeX
 ;; LaTeX environment in Emacs. Work in progress.
