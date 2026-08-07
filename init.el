@@ -467,14 +467,6 @@ disabled."
   (push-mark (point) t nil)
   (message "Pushed mark to ring"))
 
-(defun sdb/jump-to-mark ()
-  "Jump to the local mark, respecting the `mark-ring' order.
-
-This is the same as using \\[set-mark-command] with the prefix
-argument."
-  (interactive)
-  (set-mark-command 1))
-
 ;; copied from http://emacsredux.com/blog/2013/05/22/smarter-navigation-to-the-beginning-of-a-line/
 (defun sdb/smarter-move-beginning-of-line (arg)
   "Move point back to indentation of beginning of line.
@@ -500,8 +492,8 @@ point reaches the beginning or end of the buffer, stop there."
       (move-beginning-of-line 1))))
 
 ;;;;; shortcuts
-(bind-key "C-`" 'sdb/push-mark-no-activate)
-(bind-key "M-`" 'sdb/jump-to-mark)
+(bind-key "M-`" 'sdb/push-mark-no-activate)
+(bind-key "s-`" 'consult-mark)
 (bind-key "C-a" 'sdb/smarter-move-beginning-of-line)
 
 ;;;; avy
@@ -805,6 +797,14 @@ point reaches the beginning or end of the buffer, stop there."
   :init
   (projectile-mode t))
 
+;; consult UI (preview, multi-source) on top of projectile's own project-root
+;; detection, rather than `consult-project-buffer's native `project.el' one
+(use-package consult-projectile
+  :after (projectile consult)
+  :bind
+  (:map projectile-command-map
+        ("b" . consult-projectile-switch-to-buffer)))
+
 
 ;;; Completion (vertico + consult + marginalia + orderless + embark)
 ;; replaces ivy/counsel/swiper/ivy-rich: same completion-in-minibuffer job,
@@ -828,7 +828,16 @@ point reaches the beginning or end of the buffer, stop there."
               ("M-DEL" . vertico-directory-delete-word))
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
 
+;; resume the last completion session (e.g. re-open the last `consult-ripgrep'
+;; exactly where it was left) -- also bundled with vertico itself
+(use-package vertico-repeat
+  :straight nil
+  :after vertico
+  :hook (minibuffer-setup . vertico-repeat-save)
+  :bind ("M-R" . vertico-repeat))
+
 (savehist-mode 1)
+(recentf-mode 1)
 (setq enable-recursive-minibuffers t)
 
 (use-package orderless
@@ -860,7 +869,10 @@ point reaches the beginning or end of the buffer, stop there."
   ("M-y" . consult-yank-pop)
   ("C-c C-t" . consult-outline)
   ;; If called with prefix argument, directory and args can be provided
-  ("C-c s" . consult-ripgrep))
+  ("C-c s" . consult-ripgrep)
+  ;; remap rather than a direct key so it takes over both of `goto-line's
+  ;; default bindings (M-g g and M-g M-g)
+  ([remap goto-line] . consult-goto-line))
 
 ;; per-candidate actions (kill/rename/other-frame buffer, etc.) and
 ;; multi-candidate marking -- replaces the custom `ivy-toggle-mark' /
