@@ -498,7 +498,7 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; avy
 (use-package avy
-  :bind ("C-." . avy-goto-char))
+  :bind ("C-." . avy-goto-char-timer))
 
 (use-package avy-zap
   :bind ("M-z" . avy-zap-to-char-dwim))
