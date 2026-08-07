@@ -848,8 +848,20 @@ point reaches the beginning or end of the buffer, stop there."
 (use-package vertico-directory
   :after vertico
   :straight nil
+  :preface
+  (defun sdb/vertico-directory-enter-or-slash ()
+    "Descend into the selected directory candidate, like
+`vertico-directory-enter', when it is one; otherwise insert `/'
+literally (e.g. when naming a new file)."
+    (interactive)
+    (if (and (>= vertico--index 0)
+             (eq 'file (vertico--metadata-get 'category))
+             (string-suffix-p "/" (or (vertico--candidate) "")))
+        (vertico-directory-enter)
+      (insert "/")))
   :bind (:map vertico-map
               ("RET" . vertico-directory-enter)
+              ("/" . sdb/vertico-directory-enter-or-slash)
               ("DEL" . vertico-directory-delete-char)
               ("M-DEL" . vertico-directory-delete-word))
   :hook (rfn-eshadow-update-overlay . vertico-directory-tidy))
