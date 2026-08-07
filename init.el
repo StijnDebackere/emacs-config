@@ -794,16 +794,25 @@ point reaches the beginning or end of the buffer, stop there."
   :bind
   (:map projectile-mode-map
         ("s-p" . 'projectile-command-map))
+  (:map projectile-command-map
+        ("b" . consult-project-buffer)
+        ;; already projectile's own defaults -- bound explicitly here as a
+        ;; reminder they exist, not to change them
+        ("I" . projectile-ibuffer)
+        ("t" . projectile-toggle-between-implementation-and-test)
+        ("c t" . projectile-test-project))
+  :custom
+  ;; register every repo under ~/repos as a known project up front, rather
+  ;; than only after visiting a file in it at least once
+  (projectile-project-search-path '(("~/repos" . 1)))
   :init
   (projectile-mode t))
 
-;; consult UI (preview, multi-source) on top of projectile's own project-root
-;; detection, rather than `consult-project-buffer's native `project.el' one
-(use-package consult-projectile
-  :after (projectile consult)
-  :bind
-  (:map projectile-command-map
-        ("b" . consult-projectile-switch-to-buffer)))
+;; point every consult command that scopes to "the project" (consult-ripgrep,
+;; consult-project-buffer, consult-find, ...) at projectile's own root-finding
+;; instead of the default `project.el' one, so they agree with the rest of
+;; the projectile-driven workflow
+(setq consult-project-function (lambda (_) (projectile-project-root)))
 
 
 ;;; Completion (vertico + consult + marginalia + orderless + embark)
@@ -1014,8 +1023,12 @@ point reaches the beginning or end of the buffer, stop there."
   :hook
   (
    (sh-mode . lsp-mode)
+   ;; python-ts-mode is excluded here -- `lsp-pyright's own hook below
+   ;; handles it, after `require'-ing lsp-pyright first, so pyright and
+   ;; ruff both get discovered in the same `lsp' call and share one
+   ;; resolved root instead of two separate calls racing each other
    (prog-mode . (lambda ()
-                        (unless (derived-mode-p 'emacs-lisp-mode 'sql-mode)
+                        (unless (derived-mode-p 'emacs-lisp-mode 'sql-mode 'python-ts-mode)
                           (lsp-deferred))))
    (text-mode . (lambda ()
                   ;; If something enabled lsp-mode for this buffer, turn it off.
@@ -1035,6 +1048,10 @@ point reaches the beginning or end of the buffer, stop there."
   (lsp-enable-snippet nil)
   (lsp-modeline-code-actions-mode 1)
   (lsp-auto-execute-action nil)
+  ;; left off deliberately: keep the one-time interactive root prompt
+  ;; (excluding python-ts-mode from the prog-mode hook below is what makes
+  ;; it only ask once, for both pyright and ruff together) rather than
+  ;; guessing silently via projectile/project.el
   ;; (lsp-auto-guess-root t)
   ;; buffers like plain `lisp-mode', `special-mode', or `makefile-bsdmake-mode'
   ;; have no configured lsp client at all, so this warning is just noise
