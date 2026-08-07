@@ -780,6 +780,23 @@ point reaches the beginning or end of the buffer, stop there."
                                    (tramp-parse-sconfig "~/.ssh/config"))))
 
 
+;;; Terminal
+(use-package term
+  :straight nil
+  :bind
+  ;; already term's own defaults -- bound explicitly here as a reminder
+  ;; they exist. Two different keymaps because char mode (term-raw-map)
+  ;; sends almost everything to the subprocess raw and only reaches these
+  ;; via its own escape-char mechanism (term-raw-escape-map), whereas line
+  ;; mode (term-mode-map) just treats C-c as an ordinary prefix key
+  (:map term-mode-map
+        ("C-c C-j" . term-line-mode)
+        ("C-c C-k" . term-char-mode))
+  (:map term-raw-escape-map
+        ("C-j" . term-line-mode)
+        ("C-k" . term-char-mode)))
+
+
 ;;; Search
 
 ;;;; ripgrep
