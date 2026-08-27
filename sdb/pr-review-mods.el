@@ -181,9 +181,9 @@ Returns the branch name."
   (or
    ;; Try to get filename from diff line properties
    (when-let ((left-prop (get-text-property (point) 'pr-review-diff-line-left)))
-     (car left-prop))
+     (alist-get 'path left-prop))
    (when-let ((right-prop (get-text-property (point) 'pr-review-diff-line-right)))
-     (car right-prop))
+     (alist-get 'path right-prop))
    ;; Try to get from magit-section
    (when-let ((section (get-text-property (point) 'magit-section)))
      (cond
@@ -442,7 +442,7 @@ Returns a plist with:
               ;; Search for lines in the diff
               (while (< (point) file-end)
                 (when-let ((right-prop (get-text-property (point) 'pr-review-diff-line-right)))
-                  (let ((diff-line (cdr right-prop)))
+                  (let ((diff-line (alist-get 'line right-prop)))
 
                     ;; Check for exact match at start
                     (when (= diff-line start-line)
@@ -824,9 +824,9 @@ This captures the git directory automatically."
             (url (if (stringp target) target (forge-get-url target)))
             (pr-path (pr-review-url-parse url))
             (session-file (pr-review--session-file
-                           (nth 0 pr-path)
                            (nth 1 pr-path)
-                           (nth 2 pr-path))))
+                           (nth 2 pr-path)
+                           (nth 3 pr-path))))
       (progn
         ;; Check if session exists and prompt to load
         (when (file-exists-p session-file)
