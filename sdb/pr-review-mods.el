@@ -176,14 +176,28 @@ Returns the branch name."
     (message "Using PR branch: %s" branch-name)
     branch-name))
 
+;; The `pr-review-diff-line-left'/`pr-review-diff-line-right' text
+;; properties (set in emacs-pr-review's `pr-review--insert-diff') are
+;; alists shaped like:
+;;   ((path . FILENAME) (path-orig . ORIGINAL-FILENAME) (line . LINE-NUMBER))
+;; Read them only through these two accessors, so a future upstream
+;; shape change needs fixing in one place instead of at every call site.
+(defun pr-review--diff-prop-path (prop)
+  "Return the file path from a diff-line-left/right text property value PROP."
+  (alist-get 'path prop))
+
+(defun pr-review--diff-prop-line (prop)
+  "Return the line number from a diff-line-left/right text property value PROP."
+  (alist-get 'line prop))
+
 (defun pr-review-get-file-path-at-point ()
   "Get the file path at point in pr-review buffer."
   (or
    ;; Try to get filename from diff line properties
    (when-let ((left-prop (get-text-property (point) 'pr-review-diff-line-left)))
-     (alist-get 'path left-prop))
+     (pr-review--diff-prop-path left-prop))
    (when-let ((right-prop (get-text-property (point) 'pr-review-diff-line-right)))
-     (alist-get 'path right-prop))
+     (pr-review--diff-prop-path right-prop))
    ;; Try to get from magit-section
    (when-let ((section (get-text-property (point) 'magit-section)))
      (cond
@@ -442,7 +456,7 @@ Returns a plist with:
               ;; Search for lines in the diff
               (while (< (point) file-end)
                 (when-let ((right-prop (get-text-property (point) 'pr-review-diff-line-right)))
-                  (let ((diff-line (alist-get 'line right-prop)))
+                  (let ((diff-line (pr-review--diff-prop-line right-prop)))
 
                     ;; Check for exact match at start
                     (when (= diff-line start-line)
@@ -812,6 +826,19 @@ If the PR buffer is already visible in the current frame, focuses that window."
 (add-hook 'kill-buffer-hook #'pr-review--cleanup-session-on-kill)
 (add-hook 'kill-emacs-query-functions #'pr-review--save-all-sessions-on-exit)
 
+;; `pr-review-url-parse' returns a positional list (HOST OWNER REPO
+;; PR-NUMBER). Read it only through this wrapper, keyed by name, so a
+;; future change to that shape (e.g. it grew a HOST field this way
+;; once already) needs fixing in one place instead of at every
+;; nth-indexed call site.
+(defun pr-review--parse-pr-url (url)
+  "Parse PR URL into a plist (:host :owner :repo :number), or nil if it doesn't match."
+  (when-let ((parts (pr-review-url-parse url)))
+    (list :host (nth 0 parts)
+          :owner (nth 1 parts)
+          :repo (nth 2 parts)
+          :number (nth 3 parts))))
+
 ;; Helper function to open pr-review from magit with forge integration
 (defun pr-review-from-forge ()
   "Open pr-review for the PR at point in magit/forge.
@@ -822,11 +849,11 @@ This captures the git directory automatically."
 
   (if-let* ((target (forge--browse-target))
             (url (if (stringp target) target (forge-get-url target)))
-            (pr-path (pr-review-url-parse url))
+            (pr-ref (pr-review--parse-pr-url url))
             (session-file (pr-review--session-file
-                           (nth 1 pr-path)
-                           (nth 2 pr-path)
-                           (nth 3 pr-path))))
+                           (plist-get pr-ref :owner)
+                           (plist-get pr-ref :repo)
+                           (plist-get pr-ref :number))))
       (progn
         ;; Check if session exists and prompt to load
         (when (file-exists-p session-file)
