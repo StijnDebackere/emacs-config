@@ -436,6 +436,21 @@ whenever they're (re-)enabled -- so this is also hooked into
   :config (require 'mcp-hub))
   ;; :hook (after-init . mcp-hub-start-all-server))
 
+;; gptel: chat/completion against the ChatGPT (Codex) subscription via OAuth,
+;; no API key. First use prompts a browser login (or force it with
+;; `M-x gptel-openai-oauth-login'; set `gptel-openai-oauth-login-method' to
+;; `device' when on SSH). `gptel-model' must be one of the models the backend
+;; lists (see `gptel-make-openai-oauth'), which changes often.
+(use-package gptel
+  :straight (:host github :repo "karthink/gptel")
+  :config
+  (setq gptel-model 'gpt-6.1-sol
+        gptel-backend (gptel-make-openai-oauth "ChatGPT"
+                        ;; no dedicated effort option in gptel; passed through
+                        ;; to the Responses API as reasoning.effort
+                        :request-params '(:reasoning (:effort "medium")))))
+
+
 
 ;;; Editing & navigation
 
