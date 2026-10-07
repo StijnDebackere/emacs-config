@@ -463,8 +463,15 @@ whenever they're (re-)enabled -- so this is also hooked into
   :bind (:prefix-map sdb/agent-shell-map
                      :prefix "C-c a"
                      ("a" . agent-shell)
-                     ("w" . agent-shell-new-worktree-shell))
+                     ("w" . agent-shell-new-worktree-shell)
+                     ("r" . sdb/agent-shell-annotate-region)
+                     ("p" . sdb/agent-shell-preview-annotations)
+                     ("s" . sdb/agent-shell-send-annotations-to)
+                     ("e" . sdb/agent-shell-edit-annotation)
+                     ("d" . sdb/agent-shell-remove-annotation)
+                     ("c" . sdb/agent-shell-clear-annotations))
   :config
+  (load-file (expand-file-name "sdb/agent-shell-annotations.el" user-emacs-directory))
   (defun sdb/agent-shell-data-directory (subdir)
     "Resolve SUBDIR, placing worktrees under ~/worktrees/<repo-name>/."
     (if (equal subdir "worktrees")
