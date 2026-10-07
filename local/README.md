@@ -97,3 +97,66 @@ clone using the installed Git version. Include local backups in a regular backup
 to another disk or service; backups stored only on this Mac do not cover disk
 loss. New source changes are preserved by committing them in `.emacs.d` and
 backing up that repository.
+
+## Claude and Codex quota header extension
+
+Approved on 2026-10-07: extend the Codex display to Claude, showing remaining
+5-hour and 7-day account quota with the same colors, reset times, and stale
+markers. Both providers refresh asynchronously when a session opens, input is
+submitted, or a turn completes. This replaces the once-a-minute Codex polling
+approved on 2026-10-06. There is no recurring quota timer while idle.
+
+The integration is `sdb/agent-shell-quota.el`, enabled in the agent-shell
+`use-package` block. Each provider has its own shared connection and snapshot:
+
+- Codex uses `codex app-server` and `account/rateLimits/read` with its local
+  login, without starting a thread or inference turn.
+- Claude uses `bin/claude-quota.mjs` and the SDK already bundled with the
+  installed `claude-agent-acp`. It opens an ephemeral SDK connection using the
+  local Claude subscription login, disables tools, hooks, MCP servers, and
+  transcript persistence, and never yields a user prompt. The experimental
+  structured usage control query supplies the percentages and reset times;
+  SDK changes or missing subscription quota show unavailable data. No SDK
+  package installation or direct credential handling is needed.
+
+Overlapping activity requests are combined into one pending read and, when
+needed, one follow-up read. Failures retain the last snapshot as stale and
+retry on the next interaction. Readers stop when their provider's last shell
+closes or the mode is disabled. Enabling the mode attaches to existing shells;
+`agent-shell-mode-hook` attaches to future ones. Reloading cancels the old
+Codex polling timer.
+
+Successful snapshots retain their percentage colors between interactions.
+Idle time alone does not dim them; failed reads, missing refresh timestamps,
+and elapsed reset times mark them stale. Hover details show the last refresh.
+This corrected the inherited two-minute age rule on 2026-10-07; a live Claude
+snapshot over five minutes old retained `agent-shell-success` after reloading
+and redrawing, without another quota read.
+
+Text and graphical headers use `agent-shell-header-extra-indicators-function`.
+The display uses `agent-shell-success`, `agent-shell-warning`, and
+`agent-shell-error` faces: warning at 60% used and error at 85% used. Stale
+values use `shadow`; theme changes redraw the header. Reset times appear in
+local-time brackets and full hover details. Weekly resets include the weekday,
+for example `[Sunday 16:28]`. Set `sdb/agent-shell-quota-show-reset-time` to nil
+for hover details only. Disable with `M-x sdb/agent-shell-quota-mode` or refresh
+both providers manually with `M-x sdb/agent-shell-quota-refresh`.
+
+Validation completed on 2026-10-07: 38 quota/header tests, 3 mocked SDK helper
+tests, and 20 annotation tests passed. Both Lisp files compile with warnings
+configured as errors and no warnings emitted. Live account reads succeeded for
+both providers. The update is loaded into running Emacs: all five existing
+Claude/Codex shells have one quota activity subscription, quota headers include
+percentages and reset times, and the old polling timer is absent. No model
+prompt was sent for validation. Ready for user review; no commit or push.
+
+The quota suite covers normalization, provider isolation, failures, activity
+subscriptions, overlapping requests, cleanup, timer migration, and native
+text/SVG headers, including viewport state lookup. The mocked SDK helper tests
+check that no prompts are yielded, the connection is reused, output omits
+private fields, and failures retry safely.
+
+```sh
+rtk proxy ./bin/test-agent-shell-quota.sh
+rtk proxy ./bin/test-agent-shell-annotations.sh
+```

@@ -472,6 +472,8 @@ whenever they're (re-)enabled -- so this is also hooked into
                      ("c" . sdb/agent-shell-clear-annotations))
   :config
   (load-file (expand-file-name "sdb/agent-shell-annotations.el" user-emacs-directory))
+  (load-file (expand-file-name "sdb/agent-shell-quota.el" user-emacs-directory))
+  (sdb/agent-shell-quota-mode 1)
   (defun sdb/agent-shell-data-directory (subdir)
     "Resolve SUBDIR, placing worktrees under ~/worktrees/<repo-name>/."
     (if (equal subdir "worktrees")
