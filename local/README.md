@@ -1,0 +1,99 @@
+# Local package sources
+
+`local/agent-shell` is a Git subtree: its source and custom changes are ordinary
+files in the Emacs configuration repository. A clone of this repository includes
+them without initializing a submodule or restoring a separate package checkout.
+`local/packages.json` records the upstream revision and the provenance of the
+imported local changes. Future changes are recorded in `.emacs.d` commits.
+
+## agent-shell
+
+Straight uses `:type nil` and the existing `local/agent-shell` source path. It
+does not fetch or reset this source during a normal package update. There is no
+nested `.git` directory and no separate active `sdb/main` branch here. Running
+Git from the package directory operates on the Emacs configuration repository.
+
+The initial import uses upstream commit
+`6c91b1fd3d0eaf6c41aadd23e111e37ff737d6b4`, followed by separate commits for:
+
+- Nested command output, streaming capture, TAB navigation, and tests, originally
+  `9c008bf8796708a5d9d55c569343716b1c82cd90`.
+- Extensible text/SVG header indicators, originally
+  `5076c7985d6bfe7bc808374b23cae21b69c1f38f`.
+
+These original identifiers describe the former package repository. The Emacs
+repository's import and feature commit identifiers are recorded in
+`local/packages.json`. The source files loaded by Emacs remained identical during
+the conversion. The subtree import has an upstream snapshot commit and an
+integration merge, matching `git subtree add --squash`; the custom changes have
+their own subsequent commits. Obtain approval before each future commit.
+
+## Developing and updating
+
+Develop additional functionality on branches of the Emacs configuration repo.
+Keep source changes in `local/agent-shell`, personal extensions in `sdb/`, and
+configuration in the existing `use-package` block. Review focused diffs and
+obtain approval before each commit. For example, from `~/.emacs.d`:
+
+```sh
+rtk git diff -- local/agent-shell
+rtk git log -- local/agent-shell
+rtk proxy /Applications/Emacs.app/Contents/MacOS/Emacs --batch -Q \
+  -l bin/test-agent-shell-command-output.el
+```
+
+Upstream updates are deliberate subtree imports. Start with a clean repository
+and no active agent request. Fetch and inspect the upstream changes first:
+
+```sh
+rtk git fetch --no-tags https://github.com/xenodium/agent-shell.git main
+rtk git diff <recorded-upstream-commit> FETCH_HEAD
+```
+
+Prepare and review the resulting source changes, resolve conflicts preserving
+the local features, and run the source suite above and the relevant personal
+extension suites documented below. After obtaining the necessary
+commit approvals, the standard update operation is:
+
+```sh
+rtk git subtree pull --prefix=local/agent-shell --squash \
+  https://github.com/xenodium/agent-shell.git main
+```
+
+This command creates commits automatically; do not run it as a review-only
+operation. When separate approval is needed for each generated commit, prepare
+the snapshot and integration commits separately, as for the initial import.
+Record the new upstream revision and tested source tree in `local/packages.json`
+after validation. Rebuild with `M-x straight-rebuild-package RET agent-shell RET`,
+restart Emacs, and check output folds, TAB navigation, and quota headers. No push
+to the upstream agent-shell repository is required.
+
+## Backup and restoration
+
+The complete original package Git metadata, including `sdb/main`, local refs,
+configuration, and reflogs, is preserved under the ignored
+`backups/local-packages/agent-shell-pre-subtree.git/` directory. A verified bundle,
+checksum, and verification metadata are also kept under `backups/local-packages/`.
+The bundle created on 2026-10-07 restores all 168 refs and the original source at `5076c79`.
+Legacy patch exports remain in `backups/local-packages/legacy-patches/`.
+
+Normal restoration now comes from the Emacs configuration Git history. The
+backup below is only for recovering the original independent package repository,
+in a separate destination outside the active subtree. Substitute the chosen
+bundle's absolute path and run:
+
+```sh
+rtk git init --initial-branch=sdb/restore-placeholder /tmp/agent-shell-recovery
+rtk git -C /tmp/agent-shell-recovery fetch --no-tags \
+  /absolute/path/agent-shell-YYYYMMDDTHHMMSSZ.bundle '+refs/*:refs/*'
+rtk git -C /tmp/agent-shell-recovery switch sdb/main
+rtk git -C /tmp/agent-shell-recovery remote add origin \
+  https://github.com/xenodium/agent-shell.git
+rtk git -C /tmp/agent-shell-recovery fsck --full
+```
+
+This explicit fetch avoids the duplicate-tag error encountered with a mirror
+clone using the installed Git version. Include local backups in a regular backup
+to another disk or service; backups stored only on this Mac do not cover disk
+loss. New source changes are preserved by committing them in `.emacs.d` and
+backing up that repository.

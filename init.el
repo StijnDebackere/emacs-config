@@ -450,6 +450,36 @@ whenever they're (re-)enabled -- so this is also hooked into
                         ;; to the Responses API as reasoning.effort
                         :request-params '(:reasoning (:effort "medium")))))
 
+;; agent-shell: ACP client for Claude Code / Codex. Login-based auth reuses the
+;; agents' own subscription logins (no API keys). Needs the ACP adapters on
+;; PATH (see agent-shell README for the npm packages).
+(use-package shell-maker
+  :straight (:host github :repo "xenodium/shell-maker"))
+(use-package acp
+  :straight (:host github :repo "xenodium/acp.el"))
+(use-package agent-shell
+  ;; Use the subtree source; update upstream manually.
+  :straight (:type nil :local-repo "~/.emacs.d/local/agent-shell")
+  :bind (:prefix-map sdb/agent-shell-map
+                     :prefix "C-c a"
+                     ("a" . agent-shell)
+                     ("w" . agent-shell-new-worktree-shell))
+  :config
+  (defun sdb/agent-shell-data-directory (subdir)
+    "Resolve SUBDIR, placing worktrees under ~/worktrees/<repo-name>/."
+    (if (equal subdir "worktrees")
+        (let* ((root (agent-shell-worktree--git-repo-root))
+               (repo-name
+                (file-name-nondirectory
+                 (directory-file-name root))))
+          (expand-file-name (concat repo-name "/") "~/worktrees/"))
+      (agent-shell--dot-subdir-in-repo subdir)))
+  (setq agent-shell-dot-subdir-function #'sdb/agent-shell-data-directory
+        agent-shell-session-restore-verbosity 'full
+        agent-shell-anthropic-authentication
+        (agent-shell-anthropic-make-authentication :login t)
+        agent-shell-openai-authentication
+        (agent-shell-openai-make-authentication :login t)))
 
 
 ;;; Editing & navigation

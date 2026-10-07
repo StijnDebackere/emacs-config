@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "packages": {
+    "agent-shell": {
+      "directory": "local/agent-shell",
+      "source_control": "git-subtree",
+      "upstream_url": "https://github.com/xenodium/agent-shell.git",
+      "upstream_branch": "main",
+      "upstream_commit": "6c91b1fd3d0eaf6c41aadd23e111e37ff737d6b4",
+      "original_local_commit": "5076c7985d6bfe7bc808374b23cae21b69c1f38f",
+      "tested_source_tree": "d287763cd99bfda400cab1d550053d8f91cddd63",
+      "original_local_changes": [
+        "9c008bf8796708a5d9d55c569343716b1c82cd90",
+        "5076c7985d6bfe7bc808374b23cae21b69c1f38f"
+      ],
+      "backup_directory": "backups/local-packages",
+      "validation": [
+        "bin/test-agent-shell-command-output.el",
+        "bin/test-agent-shell-quota.sh",
+        "bin/test-agent-shell-annotations.sh",
+        "bin/test-agent-shell-file-links.sh",
+        "bin/test-agent-shell-magit-links.sh"
+      ],
+      "emacs_commits": {
+        "upstream_snapshot": "f69e28e12654613556317a5923dfcb587d63bada",
+        "subtree_import": "f7af5c8780f6211a815fe58e8207b2e6eddae282",
+        "command_output": "44f93bb377bdf4fc409897a1362e18a3acbb255f",
+        "header_indicators": "ced0a6b4cfbe1c8610a2e6c4e4c8ae68160c7b51"
+      }
+    }
+  }
+}
