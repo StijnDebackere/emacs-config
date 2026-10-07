@@ -769,6 +769,20 @@ By default, =agent-shell= includes configurations for all supported agents (Clau
 
 You can select and start any of the known agent shells (see =agent-shell-agent-configs=) via the =agent-shell= interactive command and enables reusing existing shells when available. With a prefix argument (=C-u M-x agent-shell=), it forces starting a new shell session, thus instantiating multiple agent shells.
 
+*** Command output
+
+Expand a shell command to reveal its nested =Output= section. Click the
+=Output= header or press =RET= on it to inspect the returned text. Visible
+command and =Output= headers are reachable with =TAB= and =S-TAB=.
+The command and its output have independent folds; collapsing the command hides
+the output header as well. The output starts collapsed and preserves its
+fold state as results arrive.
+
+Output is displayed literally, preserving whitespace and Markdown characters.
+It contains the text supplied by the ACP agent; stdout and stderr may be
+combined, and output omitted or truncated by the agent cannot be recovered.
+Commands without supplied output show an explanatory message.
+
 *** Viewport interaction
 
 Viewport is an alternative interface for composing prompts and viewing one request/response interaction at a time.  It uses a separate buffer named after its associated shell with =" [viewport]"= appended.  This buffer switches between =agent-shell-viewport-edit-mode= while composing and =agent-shell-viewport-view-mode= while reading.

@@ -3209,6 +3209,8 @@ Clears STATE's `:expanded-activity-group'."
                     (when-let* ((diffs (agent-shell--make-diff-infos
                                         :acp-tool-call (map-nested-elt acp-notification '(params update)))))
                       (list (cons :diffs diffs)))))
+           (agent-shell--save-command-output
+            state (map-nested-elt acp-notification '(params update)))
            (agent-shell--cancel-idle-timer)
            (agent-shell--emit-event
             :event 'tool-call-update
@@ -3226,6 +3228,8 @@ Clears STATE's `:expanded-activity-group'."
               :group-id group-id
               :group-label agent-shell--activity-group-label
               :group-expanded (agent-shell--activity-group-initial-expanded-p)
+              :detail (agent-shell--command-output-detail
+                       state (map-nested-elt acp-notification '(params update toolCallId)))
               :expanded agent-shell-tool-use-expand-by-default
               :above-last-prompt (not (agent-shell--active-requests-p state)))
              (agent-shell--refresh-activity-group-header state group-id)
@@ -3431,6 +3435,8 @@ Clears STATE's `:expanded-activity-group'."
               :expanded t
               :navigation 'never
               :above-last-prompt (not (agent-shell--active-requests-p state))))
+           (agent-shell--save-command-output
+            state (map-nested-elt acp-notification '(params update)))
            (agent-shell--cancel-idle-timer)
            (agent-shell--emit-event
             :event 'tool-call-update
@@ -3508,11 +3514,15 @@ Clears STATE's `:expanded-activity-group'."
                 :group-expanded (agent-shell--activity-group-initial-expanded-p)
                 :body (cond
                        (command-block
-                        (concat command-block "\n\n" (string-trim body-text)))
+                        (concat command-block
+                                (when diff-text (concat "\n\n" diff-text))))
+                       ((equal tool-call-kind "execute")
+                        diff-text)
                        (input-block
                         (concat input-block "\n\n" (string-trim body-text)))
                        (t
                         (string-trim body-text)))
+                :detail (agent-shell--command-output-detail state tool-call-id)
                 :expanded agent-shell-tool-use-expand-by-default
                 :above-last-prompt (not (agent-shell--active-requests-p state)))
                (agent-shell--refresh-activity-group-header state group-id)
@@ -5111,7 +5121,7 @@ the reported range down to the newly inserted chars."
     (add-text-properties untagged end '(field output))))
 
 (cl-defun agent-shell--update-fragment (&key state namespace-id block-id label-left label-right
-                                             body append create-new navigation expanded
+                                             body detail append create-new navigation expanded
                                              render-body-images above-last-prompt
                                              group-id group-label (group-expanded t))
   "Update fragment in the shell buffer.
@@ -5122,6 +5132,7 @@ unless NAMESPACE-ID (rarely needed).  Rely on count is possible.
 BLOCK-ID uniquely identifies the block.
 
 Dialog can have LABEL-LEFT, LABEL-RIGHT, and BODY.
+DETAIL supplies a nested fold with :label and :body inside BODY.
 
 Optional flags: APPEND text to existing content, CREATE-NEW block,
 NAVIGATION for navigation style, EXPANDED to show block expanded
@@ -5179,6 +5190,7 @@ with GROUP-EXPANDED as the group's initial fold state."
                              :label-left label-left
                              :label-right label-right
                              :body body
+                             :detail detail
                              :group-id group-id
                              :group-label group-label
                              :group-expanded group-expanded)
@@ -5249,6 +5261,7 @@ with GROUP-EXPANDED as the group's initial fold state."
                               :label-left label-left
                               :label-right label-right
                               :body body
+                              :detail detail
                               :group-id group-id
                               :group-label group-label
                               :group-expanded group-expanded)
@@ -5434,6 +5447,10 @@ insert the character instead."
                            (point))))
            (block-pos (save-mark-and-excursion
                         (agent-shell-ui-forward-block)))
+           (detail-pos (save-mark-and-excursion
+                         (agent-shell-markdown--search-visible
+                          :property 'agent-shell-ui-detail-section
+                          :predicate (lambda (section) (eq section 'header)))))
            (button-pos (save-mark-and-excursion
                          (agent-shell-next-permission-button)))
            (image-pos (save-mark-and-excursion
@@ -5452,6 +5469,7 @@ insert the character instead."
                                               :position position :from current-pos))
                                            (delq nil (list prompt-pos
                                                            block-pos
+                                                           detail-pos
                                                            button-pos
                                                            image-pos
                                                            link-pos
@@ -5501,6 +5519,11 @@ insert the character instead."
                            (point))))
            (block-pos (save-mark-and-excursion
                         (agent-shell-ui-backward-block)))
+           (detail-pos (save-mark-and-excursion
+                         (agent-shell-markdown--search-visible
+                          :property 'agent-shell-ui-detail-section
+                          :predicate (lambda (section) (eq section 'header))
+                          :backwards t)))
            (button-pos (save-mark-and-excursion
                          (agent-shell-previous-permission-button)))
            (image-pos (save-mark-and-excursion
@@ -5521,6 +5544,7 @@ insert the character instead."
                                               :position position :from current-pos))
                                            (delq nil (list prompt-pos
                                                            block-pos
+                                                           detail-pos
                                                            button-pos
                                                            image-pos
                                                            link-pos
@@ -8475,6 +8499,58 @@ end, with an omitted-character count between them.  For example, a
                            (substring line (- agent-shell--tool-output-truncation-context-length)))))
                (split-string output "\n")
                "\n")))
+
+(defun agent-shell--save-command-output (state acp-update)
+  "Retain command output from ACP-UPDATE in STATE's tool calls.
+The rawOutput.formatted_output string is stored as :output on the
+tool call, falling back to text content blocks.  Terminal output chunks
+in _meta.terminal_output_delta or _meta.terminal_output are appended.
+Status-only updates retain the output."
+  (when-let* ((tool-call-id (map-elt acp-update 'toolCallId))
+              (tool-call (map-nested-elt state (list :tool-calls tool-call-id)))
+              ((or (map-elt tool-call :command)
+                   (equal (map-elt tool-call :kind) "execute"))))
+    (let ((raw-output (map-nested-elt acp-update '(rawOutput formatted_output)))
+          (chunk (or (map-nested-elt acp-update '(_meta terminal_output_delta data))
+                     (map-nested-elt acp-update '(_meta terminal_output data))))
+          (text-output (mapconcat
+                        #'identity
+                        (seq-keep
+                         (lambda (item)
+                           (when (and (equal (map-nested-elt item '(content type)) "text")
+                                      (stringp (map-nested-elt item '(content text))))
+                             (map-nested-elt item '(content text))))
+                         (map-elt acp-update 'content))
+                        "\n\n")))
+      (when-let* ((output (cond
+                          ((and (stringp raw-output)
+                                (not (string-empty-p raw-output)))
+                           raw-output)
+                          ((not (string-empty-p text-output)) text-output)
+                          ((and (stringp chunk) (not (string-empty-p chunk)))
+                           (concat (map-elt tool-call :output) chunk))))
+                  ((not (string-empty-p output))))
+        (agent-shell--save-tool-call
+         state tool-call-id (list (cons :output output)))))))
+
+(defun agent-shell--command-output-detail (state tool-call-id)
+  "Return the nested Output detail for TOOL-CALL-ID in STATE.
+A command returning literal Markdown shows those characters unchanged.
+For example, the returned alist has :label \"Output\" and :body containing
+the command result, or a message when no result has been supplied."
+  (when-let* ((tool-call (map-nested-elt state (list :tool-calls tool-call-id)))
+              ((or (map-elt tool-call :command)
+                   (equal (map-elt tool-call :kind) "execute"))))
+    (list (cons :label "Output")
+          (cons :body
+                (propertize
+                 (or (map-elt tool-call :output)
+                     (if (member (map-elt tool-call :status) '("completed" "failed"))
+                         "No output supplied by the agent."
+                       "Waiting for command output."))
+                 'agent-shell-markdown-frozen t
+                 'agent-shell-ui-verbatim t
+                 'font-lock-face 'fixed-pitch)))))
 
 (defun agent-shell--tool-call-update-output-markdown (acp-update)
   "Return markdown output for ACP-UPDATE, a `tool_call_update' update.

@@ -99,9 +99,11 @@ otherwise nil so the id stays hidden from users."
   (when agent-shell-ui-debug-enabled
     qualified-id))
 
-(cl-defun agent-shell-ui-make-fragment-model (&key (namespace-id "global") (block-id "1") label-left label-right body group-id group-label (group-expanded t))
+(cl-defun agent-shell-ui-make-fragment-model (&key (namespace-id "global") (block-id "1") label-left label-right body detail group-id group-label (group-expanded t))
   "Create a fragment model alist.
 NAMESPACE-ID, BLOCK-ID, LABEL-LEFT, LABEL-RIGHT, and BODY are the keys.
+DETAIL is an alist with :label and :body for a nested, initially folded
+section inside the body.
 
 GROUP-ID nests this fragment under a collapsible group header (a sibling
 fragment with `block-id' GROUP-ID in the same namespace).  When that
@@ -113,6 +115,7 @@ fragment."
         (cons :label-left (agent-shell-ui--string-or-nil label-left))
         (cons :label-right (agent-shell-ui--string-or-nil label-right))
         (cons :body (agent-shell-ui--string-or-nil body))
+        (cons :detail detail)
         (cons :group-id (agent-shell-ui--string-or-nil group-id))
         (cons :group-label (agent-shell-ui--string-or-nil group-label))
         (cons :group-expanded group-expanded)))
@@ -201,6 +204,10 @@ O(accumulated-body).  Label-only updates leave the body untouched."
                  (existing-start (cond (cached (marker-position
                                                 (map-elt cached :start)))
                                        (match (prop-match-beginning match)))))
+            (when (map-elt model :detail)
+              (setq new-body (agent-shell-ui--body-with-detail
+                              new-body (map-elt model :detail) existing-start))
+              (map-put! model :body new-body))
             ;; Resolve the parent group.  A NEW child materializes its
             ;; header (auto-create) and routes into the group's region.  An
             ;; EXISTING child keeps whatever group it already belongs to;
@@ -375,7 +382,14 @@ O(accumulated-body).  Label-only updates leave the body untouched."
                                          (list (cons :start block-start)
                                                (cons :end (marker-position block-end)))
                                        (agent-shell-ui--block-range :position block-start))))
+              (when (map-elt model :detail)
+                (let ((state (get-text-property block-start 'agent-shell-ui-state)))
+                  (unless (map-elt state :has-detail)
+                    (map-put! state :has-detail t)
+                    (put-text-property block-start (map-elt block-range :end)
+                                       'agent-shell-ui-state state))))
               (agent-shell-ui--cache-block qualified-id block-range)
+              (agent-shell-ui--apply-detail-fold block-range)
               ;; Sections the update didn't touch are left out rather than
               ;; searched for: each search walks the block's accumulated
               ;; intervals, so on a streamed body that cost grew per chunk
@@ -465,7 +479,8 @@ inserted at BODY-END don't silently inherit `invisible t' from the
 trailing-whitespace tail."
   (save-excursion
     (goto-char body-end)
-    (when (re-search-backward "[^ \t\n]" body-start t)
+    (when (and (not (get-text-property body-start 'agent-shell-ui-verbatim))
+               (re-search-backward "[^ \t\n]" body-start t))
       (forward-char 1)
       (when (< (point) body-end)
         (add-text-properties (point) body-end
@@ -541,14 +556,10 @@ matches the body's current visibility, not caller-supplied state."
     (delete-region body-start body-end)
     (goto-char body-start)
     (when (and (stringp new-body) (not (string-empty-p new-body)))
-      (let ((trimmed new-body))
-        (when (string-prefix-p "\n" trimmed)
-          (setq trimmed (string-trim-left trimmed "\n")))
-        (when (string-suffix-p "\n\n" trimmed)
-          (setq trimmed (concat (string-trim-right trimmed) "\n\n")))
+      (let ((prepared (agent-shell-ui--prepare-body new-body)))
         (let ((insert-start (point)))
           (insert (agent-shell-ui--indent-text
-                   (string-remove-prefix "  " trimmed)
+                   prepared
                    (concat (or (map-elt state :group-indent) "") "  ")))
           (let ((insert-end (point)))
             (agent-shell-ui--apply-body-section-properties
@@ -1010,7 +1021,8 @@ Leaf: hide/show its body per `:collapsed'.  Group: recurse into children."
                          :from (map-elt block :start) :to (map-elt block :end)))
                   (invisible-start (agent-shell-ui--labels-end block)))
         (put-text-property invisible-start (map-elt body :end)
-                           'invisible (and (map-elt state :collapsed) t))))))
+                           'invisible (and (map-elt state :collapsed) t))
+        (agent-shell-ui--apply-detail-fold block)))))
 
 (defun agent-shell-ui--set-group-collapsed (group-qualified-id collapsed)
   "Fold or unfold group GROUP-QUALIFIED-ID (recompute-on-toggle).
@@ -1129,16 +1141,9 @@ indents a child's header line under its group header."
     (when body
       (when (or label-left label-right)
         (insert "\n\n"))
-      ;; Drop any leading body newlines as newlines are
-      ;; already inserted between labels and body.
-      (when (string-prefix-p "\n" body)
-        (setq body (string-trim-left body "\n")))
-      ;; Never leave more than two trailing newlines.
-      (when (string-suffix-p "\n\n" body)
-        (setq body (concat (string-trim-right body) "\n\n")))
       (setq body-start (point))
-      (let ((clean-body (string-remove-prefix "  " body)))
-        (insert (agent-shell-ui--indent-text clean-body body-indent)))
+      (insert (agent-shell-ui--indent-text
+               (agent-shell-ui--prepare-body body) body-indent))
       (setq body-end (point))
       (add-text-properties body-start body-end
                            `(agent-shell-ui-section body
@@ -1176,6 +1181,12 @@ indents a child's header line under its group header."
      'agent-shell-ui-state (list
                             (cons :qualified-id qualified-id)
                             (cons :kind kind)
+                            (cons :has-detail
+                                  (or (and (map-elt model :detail) t)
+                                      (and body
+                                           (text-property-any
+                                            0 (length body)
+                                            'agent-shell-ui-detail-section 'header body))))
                             (cons :group-id group-qualified-id)
                             (cons :group-indent group-indent)
                             (cons :collapsed (not expanded))
@@ -1335,7 +1346,9 @@ state-property range first.  User-facing toggling goes through
         (unless new-collapsed-state
           (save-restriction
             (narrow-to-region (map-elt body :start) (map-elt body :end))
-            (run-hooks 'agent-shell-ui-post-expand-fragment-at-point-hook)))))))
+            (run-hooks 'agent-shell-ui-post-expand-fragment-at-point-hook))
+          (agent-shell-ui--apply-detail-fold
+           (agent-shell-ui--block-range :position (map-elt block :start))))))))
 
 (defun agent-shell-ui-collapse-fragment-by-id (namespace-id block-id)
   "Collapse fragment with NAMESPACE-ID and BLOCK-ID."
@@ -1526,6 +1539,103 @@ are skipped — they have no fold indicator to act on."
     (setq agent-shell-ui--fold-toggle-state
           (if target-collapsed 'collapsed 'expanded))
     (goto-char origin)))
+
+(defvar agent-shell-ui-detail-map
+  (let ((map (copy-keymap agent-shell-ui-fragment-map)))
+    (define-key map (kbd "RET") #'agent-shell-ui-toggle-detail)
+    (define-key map [mouse-1] #'agent-shell-ui-toggle-detail)
+    map)
+  "Keymap for an expandable detail inside a fragment body.")
+
+(defun agent-shell-ui--detail-range (block)
+  "Return the nested detail range within BLOCK, or nil.
+BLOCK is an alist with :start and :end buffer positions."
+  (when (map-elt (get-text-property (map-elt block :start) 'agent-shell-ui-state)
+                 :has-detail)
+    (agent-shell-ui--nearest-range-matching-property
+     :property 'agent-shell-ui-detail :value t
+     :predicate (lambda (_ value) value)
+     :from (map-elt block :start) :to (map-elt block :end))))
+
+(defun agent-shell-ui--body-with-detail (body detail existing-start)
+  "Combine BODY with a foldable DETAIL, retaining its previous fold.
+DETAIL has :label and :body; EXISTING-START identifies the old fragment,
+or nil for a new fragment.  For example, an Output detail initially
+shows only its header until the user expands it."
+  (let* ((old-range (when existing-start
+                      (agent-shell-ui--detail-range
+                       (agent-shell-ui--block-range :position existing-start))))
+         (state (list (cons :collapsed
+                            (if old-range
+                                (map-elt (get-text-property
+                                          (map-elt old-range :start)
+                                          'agent-shell-ui-detail)
+                                         :collapsed)
+                              t)))))
+    (propertize
+     (concat body
+             (when body "\n\n")
+             (propertize
+              (concat (if (map-elt state :collapsed) "▶ " "▼ ")
+                      (map-elt detail :label))
+              'agent-shell-ui-detail state
+              'agent-shell-ui-detail-section 'header
+              'agent-shell-markdown-frozen t
+              'keymap agent-shell-ui-detail-map)
+             (propertize
+              (concat "\n\n" (map-elt detail :body))
+              'agent-shell-ui-detail state
+              'agent-shell-ui-detail-section 'body
+              'agent-shell-markdown-frozen t))
+     'agent-shell-ui-verbatim t)))
+
+(defun agent-shell-ui--apply-detail-fold (block)
+  "Hide BLOCK's nested detail body when its own state is collapsed.
+Expanding the parent reveals the detail header and restores this fold."
+  (when-let* ((range (agent-shell-ui--detail-range block))
+              (state (get-text-property (map-elt range :start) 'agent-shell-ui-detail))
+              ((map-elt state :collapsed))
+              (body (agent-shell-ui--nearest-range-matching-property
+                     :property 'agent-shell-ui-detail-section :value 'body
+                     :from (map-elt range :start) :to (map-elt range :end))))
+    (put-text-property (map-elt body :start) (map-elt body :end) 'invisible t)))
+
+(defun agent-shell-ui-toggle-detail ()
+  "Toggle the nested detail at point without changing its parent fold."
+  (interactive)
+  (save-mark-and-excursion
+    (when-let* ((state (get-text-property (point) 'agent-shell-ui-detail))
+                (block (agent-shell-ui--block-range :position (point)))
+                (range (agent-shell-ui--detail-range block))
+                (body (agent-shell-ui--nearest-range-matching-property
+                       :property 'agent-shell-ui-detail-section :value 'body
+                       :from (map-elt range :start) :to (map-elt range :end))))
+      (let ((inhibit-read-only t)
+            (buffer-undo-list t)
+            (props (text-properties-at (map-elt range :start))))
+        (map-put! state :collapsed (not (map-elt state :collapsed)))
+        (goto-char (map-elt range :start))
+        (delete-char 2)
+        (insert (apply #'propertize
+                       (if (map-elt state :collapsed) "▶ " "▼ ") props))
+        (put-text-property (map-elt range :start) (map-elt range :end)
+                           'agent-shell-ui-detail state)
+        (put-text-property (map-elt body :start) (map-elt body :end)
+                           'invisible
+                           (or (map-elt state :collapsed)
+                               (get-text-property (map-elt range :start) 'invisible)))))))
+
+(defun agent-shell-ui--prepare-body (body)
+  "Normalize BODY whitespace unless it carries agent-shell-ui-verbatim.
+For example, an ordinary body starting with two spaces loses that
+prefix, while a verbatim command result retains every character."
+  (if (get-text-property 0 'agent-shell-ui-verbatim body)
+      body
+    (when (string-prefix-p "\n" body)
+      (setq body (string-trim-left body "\n")))
+    (when (string-suffix-p "\n\n" body)
+      (setq body (concat (string-trim-right body) "\n\n")))
+    (string-remove-prefix "  " body)))
 
 (defun agent-shell-ui--string-or-nil (str)
   "Return STR if it is not nil and not empty, otherwise nil."
