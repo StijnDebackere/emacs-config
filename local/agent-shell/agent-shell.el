@@ -5749,6 +5749,11 @@ width is unchanged, down to a comparison."
                  (agent-shell--header-width (current-buffer))))
     (agent-shell--update-header-and-mode-line)))
 
+(defvar agent-shell-header-extra-indicators-function nil
+  "Optional function receiving STATE and returning extra header strings.
+For example, return a list containing a propertized \"5h: 64% left\".
+Each string's `face' and `help-echo' are honored in both header styles.")
+
 (cl-defun agent-shell--make-header-model (state &key position status key-hints menu-keys width)
   "Create a header model alist from STATE and the given header fields.
 The model contains all inputs needed to render the header.  POSITION,
@@ -5778,6 +5783,8 @@ defaulting to the frame width."
     (:background-mode . ,(frame-parameter nil 'background-mode))
     (:context-indicator . ,(agent-shell--context-usage-indicator))
     (:cost-indicator . ,(agent-shell--cost-indicator))
+    (:extra-indicators . ,(when agent-shell-header-extra-indicators-function
+                           (funcall agent-shell-header-extra-indicators-function state)))
     (:busy-indicator-frame . ,(agent-shell--busy-indicator-frame))
     (:position . ,position)
     (:status . ,status)
@@ -5908,7 +5915,7 @@ keeps entries fresh."
                                            'face 'agent-shell-key-binding)
                                " "
                                (map-elt help-hint :description))))
-         (text-header (format " %s%s%s%s%s ➤ %s%s%s%s%s%s"
+         (text-header (format " %s%s%s%s%s ➤ %s%s%s%s%s%s%s"
                               (cond
                                ((and (map-elt header-model :position)
                                      (map-elt header-model :status))
@@ -5975,6 +5982,10 @@ keeps entries fresh."
                               (if (map-elt header-model :cost-indicator)
                                   (concat " ➤ " (map-elt header-model :cost-indicator))
                                 "")
+                              (mapconcat (lambda (indicator)
+                                           (concat " ➤ " (replace-regexp-in-string
+                                                          "%" "%%" indicator t t)))
+                                         (map-elt header-model :extra-indicators) "")
                               (if (and (map-elt header-model :status)
                                        (not (map-elt header-model :position)))
                                   (concat " ➤ " (map-elt header-model :status))
@@ -6100,6 +6111,19 @@ keeps entries fresh."
                                                                               'default)))
                                                                 (dx . "8"))
                                                               (substring-no-properties (map-elt header-model :cost-indicator)))))
+                                (dolist (indicator (map-elt header-model :extra-indicators))
+                                  (dom-append-child text-node
+                                                    (dom-node 'tspan
+                                                              `((fill . ,(agent-shell--svg-fill-color 'default))
+                                                                (dx . "8"))
+                                                              "➤"))
+                                  (dom-append-child text-node
+                                                    (dom-node 'tspan
+                                                              `((fill . ,(agent-shell--svg-fill-color
+                                                                          (or (get-text-property 0 'face indicator)
+                                                                              'default)))
+                                                                (dx . "8"))
+                                                              (substring-no-properties indicator))))
                                 text-node))
              ;; Bottom text line
              (svg--append svg (let ((text-node (dom-node 'text
@@ -6203,7 +6227,13 @@ keeps entries fresh."
                             (format " %s" (with-temp-buffer
                                             (svg-insert-image svg)
                                             (buffer-string)))
-                            'help-echo "Open settings menu"
+                            'help-echo (string-join
+                                        (cons "Open settings menu"
+                                              (delq nil
+                                                    (mapcar (lambda (indicator)
+                                                              (get-text-property 0 'help-echo indicator))
+                                                            (map-elt header-model :extra-indicators))))
+                                        "\n")
                             'mouse-face 'mode-line-highlight
                             'local-map (let ((map (make-sparse-keymap)))
                                          (define-key map [header-line down-mouse-1] #'ignore)
