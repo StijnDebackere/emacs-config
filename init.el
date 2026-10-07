@@ -494,6 +494,8 @@ whenever they're (re-)enabled -- so this is also hooked into
                      ("C-j" . newline))
   :config
   (load-file (expand-file-name "sdb/agent-shell-annotations.el" user-emacs-directory))
+  (load-file (expand-file-name "sdb/agent-shell-pairing.el" user-emacs-directory))
+  (sdb/agent-shell-pairing-enable)
   (load-file (expand-file-name "sdb/agent-shell-quota.el" user-emacs-directory))
   (load-file (expand-file-name "sdb/agent-shell-file-links.el" user-emacs-directory))
   (sdb/agent-shell-file-links-enable)

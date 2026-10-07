@@ -161,6 +161,32 @@ rtk proxy ./bin/test-agent-shell-quota.sh
 rtk proxy ./bin/test-agent-shell-annotations.sh
 ```
 
+## Prompt-scoped delimiter pairing
+
+Approved on 2026-10-07: isolate Electric Pair's insertion checks to the current
+agent-shell input, so unbalanced parentheses or quotes in conversation history
+cannot affect typing. The personal extension is `sdb/agent-shell-pairing.el`,
+loaded and enabled in the agent-shell `use-package` block. It applies to existing
+and future shell buffers and viewport compose buffers.
+
+Parentheses, brackets, braces, double quotes, backticks, and single quotes pair;
+explicitly typing the closer skips the existing character. Single quotes after
+word characters remain literal for contractions and possessives. Selected text
+can still be wrapped, and backslash escapes retain native Electric Pair behavior.
+The wrapper preserves narrowing and ignores transcript edits and missing or stale
+prompts. Extra quote pairs are buffer-local; other modes retain their settings.
+
+Validation completed on 2026-10-07: 9 pairing tests and 20 annotation tests passed.
+Pairing source and tests compile with warnings treated as errors; `init.el` passes
+the parentheses check. All six delimiter checks passed against temporary copies
+of each of the five running Claude/Codex transcripts. The update is loaded in
+running Emacs without changing existing drafts. The user confirmed the fix works
+in running Emacs and approved committing it.
+
+```sh
+rtk proxy ./bin/test-agent-shell-pairing.sh
+```
+
 ## Local file-link viewers
 
 Approved on 2026-10-06: ordinary local HTML/HTM links open in the browser;
