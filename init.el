@@ -759,6 +759,16 @@ point reaches the beginning or end of the buffer, stop there."
 
 ;;;; magit
 (use-package magit
+  :init
+  (defun sdb/magit-truncate-lines ()
+    "Keep Magit buffers truncated even when global wrapping is enabled."
+    (when (derived-mode-p 'magit-mode)
+      (when visual-line-mode
+        (visual-line-mode -1))
+      (setq-local truncate-lines t)))
+  :hook
+  ((magit-mode . sdb/magit-truncate-lines)
+   (visual-line-mode . sdb/magit-truncate-lines))
   :bind
   (("C-x g" . magit-status)
    ("C-c f" . magit-file-dispatch)
