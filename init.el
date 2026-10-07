@@ -497,6 +497,8 @@ whenever they're (re-)enabled -- so this is also hooked into
   (load-file (expand-file-name "sdb/agent-shell-quota.el" user-emacs-directory))
   (load-file (expand-file-name "sdb/agent-shell-file-links.el" user-emacs-directory))
   (sdb/agent-shell-file-links-enable)
+  (load-file (expand-file-name "sdb/agent-shell-magit-links.el" user-emacs-directory))
+  (sdb/agent-shell-magit-links-enable)
   (sdb/agent-shell-quota-mode 1)
   (defun sdb/agent-shell-data-directory (subdir)
     "Resolve SUBDIR, placing worktrees under ~/worktrees/<repo-name>/."

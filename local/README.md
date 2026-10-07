@@ -192,3 +192,29 @@ SVG filenames, and repeated setup. The browser/external openers are stubbed.
 A temporary SVG also rendered in Image mode in the running graphical Emacs;
 the temporary file and buffer were removed afterward. The helper and tests
 are kept in the Emacs configuration repository.
+
+## Magit review links
+
+Approved on 2026-10-06: add a restricted Markdown link handler for reviewing
+staged changes in Magit and test it against the currently proposed commit.
+Committing remains subject to explicit approval for each commit and a review
+patch supplied beforehand.
+
+`sdb/agent-shell-magit-links.el` is loaded and enabled by the agent-shell
+`use-package` block. `magit:staged` opens the current repository's staged diff;
+`magit:staged?repo=%2Fpath%2Fto%2Frepo` selects a local repository explicitly.
+Paths can contain percent-encoded spaces. Other actions, extra queries,
+malformed escapes, remote paths, and non-Git directories are rejected. The
+handler calls only the staged-diff viewer with explicit arguments and leaves
+ordinary links unchanged. It also gives Magit links accurate hover hints.
+
+Run the tests after changing this helper or updating agent-shell/Magit:
+
+```sh
+rtk proxy ./bin/test-agent-shell-magit-links.sh
+```
+
+Validation: 11 tests passed, including the rendered RET action and a real
+temporary Git repository where HEAD, staged changes, and unstaged changes
+remain unchanged after opening the viewer. The 15 file-viewer tests also
+passed. Commit approval is separate from implementation approval.
