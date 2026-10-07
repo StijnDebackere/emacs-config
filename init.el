@@ -121,6 +121,15 @@ Returns:
         (message "%s" file-name))
     (message "WARNING: Current buffer is not attached to a file!")))
 
+(defun sdb/copy-file-path ()
+  "Copy and show the full file path of the current buffer."
+  (interactive)
+  (if-let* ((file-path (sdb--file-path)))
+      (progn
+        (kill-new file-path)
+        (message "%s" file-path))
+    (message "WARNING: Current buffer is not attached to a file!")))
+
 
 ;;; Sane defaults
 ;; Amalgamation of
@@ -981,7 +990,8 @@ literally (e.g. when naming a new file)."
   ;; `ivy-use-virtual-buffers'
   ("C-x b" . consult-buffer)
   ;; use consult-line instead of isearch
-  ;; word at point is offered as the first M-n history entry, same as swiper
+  ;; active region, else word at point, is offered as the first M-n history
+  ;; entry, same as swiper
   ("C-s" . consult-line)
   ("M-y" . consult-yank-pop)
   ("C-c C-t" . consult-outline)
@@ -989,7 +999,14 @@ literally (e.g. when naming a new file)."
   ("C-c s" . consult-ripgrep)
   ;; remap rather than a direct key so it takes over both of `goto-line's
   ;; default bindings (M-g g and M-g M-g)
-  ([remap goto-line] . consult-goto-line))
+  ([remap goto-line] . consult-goto-line)
+  :config
+  ;; add the region (if active) or symbol at point to the search history
+  ;; instead of pre-filling it, so `M-n' pulls it in without disturbing
+  ;; `consult-line's default "nearest match first" ordering
+  (consult-customize
+   consult-line
+   :add-history (seq-some #'thing-at-point '(region symbol))))
 
 ;; per-candidate actions (kill/rename/other-frame buffer, etc.) and
 ;; multi-candidate marking -- replaces the custom `ivy-toggle-mark' /
@@ -1036,8 +1053,8 @@ literally (e.g. when naming a new file)."
 ;; brew cask install font-source-code-pro
 (add-to-list 'default-frame-alist
              (cond
-              ((string-equal system-type "darwin")    '(font . "Iosevka Comfy 18"))
-              ((string-equal system-type "gnu/linux") '(font . "Iosevka Comfy 14"))))
+              ((string-equal system-type "darwin")    '(font . "Iosevka Comfy Motion Fixed 18"))
+              ((string-equal system-type "gnu/linux") '(font . "Iosevka Comfy Motion Fixed 14"))))
 
 (use-package ligature
   :config
@@ -1106,10 +1123,13 @@ literally (e.g. when naming a new file)."
 ;;;; GitHub CoPilot
 (use-package copilot
   :straight (:host github :repo "copilot-emacs/copilot.el" :files ("dist" "*.el"))
-  ;; :hook (prog-mode . (lambda ()
-  ;;                      (unless (derived-mode-p 'sql-mode))
-  ;;                      copilot-mode))
-  :hook (prog-mode . copilot-mode)
+  :commands copilot-mode
+  :init
+  (defun sdb/copilot-enable-in-prog-mode ()
+    "Enable Copilot in programming buffers except `mhtml-mode'."
+    (unless (derived-mode-p 'mhtml-mode)
+      (copilot-mode 1)))
+  :hook (prog-mode . sdb/copilot-enable-in-prog-mode)
   :bind (:map copilot-completion-map
               ("TAB" . copilot-accept-completion))
   )
@@ -1264,6 +1284,15 @@ Hook this function into `TeX-after-compilation-finished-functions'."
           (cl-loop for win in (window-list)
                    if (eq (window-buffer win) (current-buffer))
                    do (kill-buffer (window-buffer win))))))))
+
+;;;; PDF
+;; epdfinfo build requires poppler, automake, and pkg-config (available
+;; through Homebrew); compiles on first use via `pdf-loader-install'.
+(use-package pdf-tools
+  :defer t
+  :init
+  (require 'pdf-loader)
+  (pdf-loader-install))
 
 ;;;; Lua
 ;; Requires lua and luarocks installations, available through Homebrew
