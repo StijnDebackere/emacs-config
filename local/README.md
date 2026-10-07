@@ -160,3 +160,35 @@ private fields, and failures retry safely.
 rtk proxy ./bin/test-agent-shell-quota.sh
 rtk proxy ./bin/test-agent-shell-annotations.sh
 ```
+
+## Local file-link viewers
+
+Approved on 2026-10-06: ordinary local HTML/HTM links open in the browser;
+HTML source citations keep Emacs line/range/column navigation. Extended on
+2026-10-07: PNG, JPEG (jpg/jpeg), SVG, GIF, TIFF (tif/tiff), WebP, and PDF
+links open in Emacs with the configured native viewers. Other links retain
+the existing behavior.
+
+`sdb/agent-shell-file-links.el` is loaded and enabled by the agent-shell
+`use-package` block. Its named advice routes local viewer links before
+agent-shell's binary-file heuristic can send images/PDFs to the operating
+system. It preserves `agent-shell-markdown-open-file-function`, including
+custom window placement. File URLs with percent-encoded spaces are supported.
+Directories and remote paths retain the existing handler. Source references
+on image/PDF links are ignored because those viewers do not use source lines.
+SVG displays in Image mode; `C-c C-c` toggles its image and XML source.
+
+This integration lives in the Emacs configuration, without a new patch in the
+agent-shell checkout. Its advice uses private Markdown parsing/navigation
+functions, so rerun the routing suite after upstream updates:
+
+```sh
+rtk proxy ./bin/test-agent-shell-file-links.sh
+```
+
+Validation: 15 routing tests passed, covering source range/column navigation,
+all binary image extensions and uppercase variants, text SVG fixtures, encoded
+SVG filenames, and repeated setup. The browser/external openers are stubbed.
+A temporary SVG also rendered in Image mode in the running graphical Emacs;
+the temporary file and buffer were removed afterward. The helper and tests
+are kept in the Emacs configuration repository.
