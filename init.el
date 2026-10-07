@@ -469,7 +469,20 @@ whenever they're (re-)enabled -- so this is also hooked into
                      ("s" . sdb/agent-shell-send-annotations-to)
                      ("e" . sdb/agent-shell-edit-annotation)
                      ("d" . sdb/agent-shell-remove-annotation)
-                     ("c" . sdb/agent-shell-clear-annotations))
+                     ("c" . sdb/agent-shell-clear-annotations)
+                     ;; Prompt for steering or queue management from project buffers.
+                     ("S" . agent-shell-prompt-steer)
+                     ("q" . agent-shell-prompt-queue)
+                     ("R" . agent-shell-prompt-queue-resume)
+                     ("D" . agent-shell-prompt-queue-remove)
+                     :map agent-shell-mode-map
+                     ;; RET queues while busy; C-u RET or M-RET steers instead.
+                     ("RET" . agent-shell-submit)
+                     ("M-RET" . agent-shell-submit-override)
+                     ("M-<return>" . agent-shell-submit-override)
+                     ("C-c C-c" . agent-shell-interrupt)
+                     ("S-<return>" . newline)
+                     ("C-j" . newline))
   :config
   (load-file (expand-file-name "sdb/agent-shell-annotations.el" user-emacs-directory))
   (load-file (expand-file-name "sdb/agent-shell-quota.el" user-emacs-directory))
@@ -485,6 +498,8 @@ whenever they're (re-)enabled -- so this is also hooked into
       (agent-shell--dot-subdir-in-repo subdir)))
   (setq agent-shell-dot-subdir-function #'sdb/agent-shell-data-directory
         agent-shell-session-restore-verbosity 'full
+        agent-shell-busy-submit-default-function #'agent-shell-busy-submit-queue
+        agent-shell-busy-submit-override-function #'agent-shell-busy-submit-steer
         agent-shell-anthropic-authentication
         (agent-shell-anthropic-make-authentication :login t)
         agent-shell-openai-authentication
