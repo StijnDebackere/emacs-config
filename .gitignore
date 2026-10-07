@@ -1,3 +1,4 @@
 *.desktop*
 .*/
 .DS_Store
+/backups/local-packages/
